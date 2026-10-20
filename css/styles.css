@@ -306,6 +306,23 @@ a.wide-btn { text-decoration: none; }
 .picker-note { grid-column: 1 / -1; margin: -4px 0 0; font-size: 14px; color: #6b6b70; }
 .picker-heading { grid-column: 1 / -1; margin: 8px 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6b70; }
 
+/* Compact view while editing on the computer: smaller chrome and buttons so
+   whole pages fit on screen. Robyn's tablet never uses it. */
+.compact { --bar-h: 60px; --gap: 6px; --radius: 12px; }
+.compact .bar-btn { width: 56px; border-width: 2px; }
+.compact .bar-btn svg { width: 28px; height: 28px; }
+.compact .edit-btn { font-size: 12px; }
+.compact .edit-btn svg { width: 22px; height: 22px; }
+.compact .lock-btn { width: 40px; }
+.compact .strip-word span { font-size: 11px; }
+.compact .page-head h1 { font-size: 17px; }
+.compact .edit-banner { font-size: 14px; }
+.compact .edit-banner .pill { min-height: 34px; padding: 4px 12px; }
+.compact .grid { max-width: calc(var(--cols, 6) * 150px); width: 100%; margin: 0 auto; }
+.compact .tile { border-width: 3px; padding: 4px 4px 3px; }
+.compact .tile .label { font-size: clamp(12px, calc(var(--row-h, 90px) * 0.15), 16px); }
+.compact .tile.folder::before { height: 10px; }
+
 /* Phones and small windows: shrink the chrome */
 @media (max-width: 700px) {
   :root { --bar-h: 76px; --gap: 6px; --radius: 14px; }

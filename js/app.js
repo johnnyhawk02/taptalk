@@ -225,10 +225,13 @@ const grid = $('grid');
 function render() {
   const page = state.pages[pageId] || state.pages[HOME];
   document.documentElement.classList.toggle('no-labels', !state.settings.labels);
+  document.documentElement.classList.toggle('compact', isCompact());
   document.body.classList.toggle('editing', editing);
   $('editBanner').hidden = !editing;
   const syncMode = sync.config().mode;
   $('sendFromBanner').hidden = syncMode !== 'send';
+  $('compactToggle').hidden = syncMode !== 'send';
+  $('compactToggle').textContent = compactPref() ? 'Full-size view' : 'Smaller view';
   $('editToggle').hidden = syncMode !== 'send';
   $('editToggle').setAttribute('aria-pressed', String(editing));
   $('editToggleText').textContent = editing ? 'Done' : 'Edit';
@@ -287,6 +290,15 @@ function addTile() {
   return b;
 }
 
+// Editing on the computer uses a smaller view by default (toggle in the edit bar).
+const COMPACT_KEY = 'taptalk.compact';
+function compactPref() {
+  try { return localStorage.getItem(COMPACT_KEY) !== 'off'; } catch { return true; }
+}
+function isCompact() {
+  return editing && compactPref() && sync.config().mode === 'send';
+}
+
 function sizeRows() {
   const count = grid.children.length;
   const cols = state.settings.cols;
@@ -298,7 +310,9 @@ function sizeRows() {
   // to hit and let the page scroll.
   const fit = (avail - gap * (rows - 1)) / rows;
   const min = Math.min(colW * 0.8, 110);
-  const rowH = Math.max(min, Math.min(fit, colW * 1.15));
+  const rowH = isCompact()
+    ? Math.max(64, Math.min(fit, colW * 0.85, 120))
+    : Math.max(min, Math.min(fit, colW * 1.15));
   grid.style.setProperty('--row-h', Math.floor(rowH) + 'px');
 }
 
@@ -481,6 +495,10 @@ $('doneEditing').addEventListener('click', () => setEditing(false));
 // On the editing computer (never seen by Robyn) there's an Edit button in the
 // top bar and a keyboard shortcut: E to start or finish, Esc to finish.
 $('editToggle').addEventListener('click', () => setEditing(!editing));
+$('compactToggle').addEventListener('click', () => {
+  try { localStorage.setItem(COMPACT_KEY, compactPref() ? 'off' : 'on'); } catch { /* not important */ }
+  render();
+});
 document.addEventListener('keydown', (e) => {
   if (sync.config().mode !== 'send' || e.metaKey || e.ctrlKey || e.altKey) return;
   if (document.querySelector('dialog[open]') || e.target.closest?.('input, textarea, select, [contenteditable]')) return;

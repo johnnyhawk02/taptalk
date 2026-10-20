@@ -46,7 +46,7 @@ On Robyn's tablet, in TapTalk's grown-up settings:
 
 ## Day to day
 
-1. On the computer, click **Edit** in the top bar (or press **E**) and make your changes. Press **E** or **Esc** when you're done. The computer stays in edit mode if you reload the page.
+1. On the computer, click **Edit** in the top bar (or press **E**) and make your changes. Press **E** or **Esc** when you're done. The computer stays in edit mode if you reload the page. While editing, the computer shows a smaller view so whole pages fit on screen; **Full-size view** in the purple bar shows it the size Robyn sees it.
 2. Press **Send to tablet**. It's in the purple editing bar, and in the grown-up settings too.
 3. The tablet updates the next time TapTalk is opened, or within 5 minutes. To update it right away: grown-up settings → **Check for updates now**.
 
