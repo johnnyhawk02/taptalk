@@ -86,6 +86,9 @@ button { cursor: pointer; }
 .home-btn svg path { fill: var(--pron-bg); }
 .bar-btn:active { transform: scale(0.95); }
 
+.edit-btn { grid-auto-flow: row; gap: 2px; align-content: center; font-weight: 700; font-size: 15px; }
+.edit-btn svg { width: 34px; height: 34px; }
+.edit-btn[aria-pressed="true"] { border-color: var(--q); background: var(--q-bg); }
 .lock-btn { width: 58px; border-color: transparent; background: transparent; }
 .lock-btn svg { width: 40px; height: 40px; }
 .lock-btn .ring-bg { stroke: var(--line); stroke-width: 3; }

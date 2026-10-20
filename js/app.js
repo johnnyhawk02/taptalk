@@ -229,8 +229,12 @@ function render() {
   $('editBanner').hidden = !editing;
   const syncMode = sync.config().mode;
   $('sendFromBanner').hidden = syncMode !== 'send';
+  $('editToggle').hidden = syncMode !== 'send';
+  $('editToggle').setAttribute('aria-pressed', String(editing));
+  $('editToggleText').textContent = editing ? 'Done' : 'Edit';
   $('editHint').textContent = syncMode === 'receive'
     ? 'Editing — changes made here are replaced by the next update from the computer'
+    : syncMode === 'send' ? 'Editing — click a button to change it · press E when done'
     : 'Editing — tap a button to change it';
   $('pageTitle').textContent = page.name;
   grid.style.setProperty('--cols', state.settings.cols);
@@ -462,8 +466,27 @@ bindSetting('setPitch', 'pitch', (el) => Number(el.value));
 
 $('testVoice').addEventListener('click', () => speak('Hello! I want to play.'));
 
-$('startEditing').addEventListener('click', () => { $('settings').close(); editing = true; render(); });
-$('doneEditing').addEventListener('click', () => { editing = false; render(); applyPendingBoard(); });
+// The editing computer remembers edit mode across page reloads.
+const EDIT_KEY = 'taptalk.editing';
+function setEditing(on) {
+  editing = on;
+  try { sessionStorage.setItem(EDIT_KEY, on ? '1' : ''); } catch { /* not important */ }
+  render();
+  if (!on) applyPendingBoard();
+}
+
+$('startEditing').addEventListener('click', () => { $('settings').close(); setEditing(true); });
+$('doneEditing').addEventListener('click', () => setEditing(false));
+
+// On the editing computer (never seen by Robyn) there's an Edit button in the
+// top bar and a keyboard shortcut: E to start or finish, Esc to finish.
+$('editToggle').addEventListener('click', () => setEditing(!editing));
+document.addEventListener('keydown', (e) => {
+  if (sync.config().mode !== 'send' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (document.querySelector('dialog[open]') || e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+  if (e.key === 'e' || e.key === 'E') { e.preventDefault(); setEditing(!editing); }
+  else if (e.key === 'Escape' && editing) setEditing(false);
+});
 
 $('resetBtn').addEventListener('click', async () => {
   if (!confirm('Reset to the starting board? Your changes and photos will be removed.')) return;
@@ -1042,6 +1065,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 navigator.storage?.persist?.();
 
 initCropper();
+try { if (sync.config().mode === 'send' && sessionStorage.getItem(EDIT_KEY)) editing = true; } catch { /* ignore */ }
 render();
 renderStrip();
 
