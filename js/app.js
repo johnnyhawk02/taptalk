@@ -847,7 +847,16 @@ document.addEventListener('paste', (e) => {
   // Leave normal text pasting into the word fields alone.
   if (!inBox && !files.some((f) => f.type.startsWith('image/'))) return;
   e.preventDefault();
+  if ($('picker').open) $('picker').close();
   pasteFrom({ files, html: cd?.getData('text/html') || '', text: cd?.getData('text/plain') || '' });
+});
+
+// ⌘V / Ctrl+V anywhere in the button editor: some browsers only fire a paste
+// event inside something editable, so steer it into the paste box first.
+document.addEventListener('keydown', (e) => {
+  if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'v' || !editorEl.open || $('picker').open || $('cropper').open) return;
+  if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+  $('pasteBox').focus();
 });
 
 // The paste box only exists to get the device's own Paste menu; never let
@@ -979,15 +988,16 @@ function pickButton(src, words, onPick) {
   span.textContent = words;
   b.append(img, span);
   b.addEventListener('click', async () => {
+    let sym;
     try {
-      draft.sym = await onPick();
+      sym = await onPick();
     } catch {
       alert('Could not get that picture. Check the internet connection and try again.');
       return;
     }
     if (!$('edLabel').value) $('edLabel').value = words;
-    renderPreview();
     $('picker').close();
+    if (sym) { draft.sym = sym; renderPreview(); }
   });
   return b;
 }
@@ -999,6 +1009,57 @@ function pickerHeading(text) {
   return h;
 }
 
+// Photos from around the web, through Openverse (openverse.org): a free,
+// keyless search of ~800 million images from Flickr, Wikimedia and others,
+// whose image proxy lets the app download the one you pick.
+const OPENVERSE = 'https://api.openverse.org/v1/images/';
+const webCache = new Map(); // query -> results (keeps within Openverse's free limits)
+
+async function searchWeb(q) {
+  const key = q.trim().toLowerCase();
+  if (!webCache.has(key)) {
+    webCache.set(key, (async () => {
+      const res = await fetch(`${OPENVERSE}?q=${encodeURIComponent(key)}&page_size=20&mature=false`);
+      if (res.status === 429) throw new Error('busy');
+      if (!res.ok) throw new Error(res.status);
+      return (await res.json()).results.map((r) => ({ id: r.id, title: r.title || key, url: r.url }));
+    })());
+    webCache.get(key).catch(() => webCache.delete(key));
+  }
+  return webCache.get(key);
+}
+
+// Most results are on Flickr, whose own servers are much faster than going
+// through Openverse and offer ready-made sizes (n = 320px, c = 800px, b = 1024px).
+const FLICKR = /^(https:\/\/live\.staticflickr\.com\/\d+\/\d+_[0-9a-f]+)(?:_[a-z0-9])?\.jpg$/;
+const flickrSize = (url, size) => (FLICKR.test(url || '') ? url.replace(FLICKR, `$1_${size}.jpg`) : '');
+
+function webThumb(p) {
+  return flickrSize(p.url, 'n') || `${OPENVERSE}${p.id}/thumb/`;
+}
+
+// Picked web photos go through the picture editor, like any other photo.
+async function pickWebPhoto(p) {
+  const tries = [flickrSize(p.url, 'b'), flickrSize(p.url, 'c'), `${OPENVERSE}${p.id}/thumb/?full_size=true`, `${OPENVERSE}${p.id}/thumb/`];
+  for (const url of tries.filter(Boolean)) {
+    try {
+      const res = await fetch(url);
+      const blob = res.ok && (await res.blob());
+      if (blob?.type.startsWith('image/')) { usePhoto(blob); return null; }
+    } catch { /* try the next size */ }
+  }
+  throw new Error('no copy of that photo could be downloaded');
+}
+
+let webTimer = 0;
+
+$('pickerGoogle').addEventListener('click', () => {
+  const q = $('pickerSearch').value.trim() || $('edLabel').value.trim();
+  window.open('https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(q), '_blank', 'noopener');
+  $('pickerGoogle').textContent = 'Copy a picture there, then paste here';
+  setTimeout(() => { $('pickerGoogle').textContent = 'Google Images ↗'; }, 8000);
+});
+
 async function renderPicker() {
   const run = ++pickerRun;
   const q = $('pickerSearch').value;
@@ -1008,8 +1069,10 @@ async function renderPicker() {
 
   const arasaacBox = document.createElement('div');
   arasaacBox.className = 'picker-section';
-  // ARASAAC first (the board's own style), then Mulberry, which also works offline.
-  const parts = q.trim() ? [arasaacBox] : [];
+  const webBox = document.createElement('div');
+  webBox.className = 'picker-section';
+  // ARASAAC first (the board's own style), then photos, then Mulberry, which also works offline.
+  const parts = q.trim() ? [arasaacBox, webBox] : [];
   if (mulberry.length) {
     parts.push(pickerHeading('Mulberry'), ...mulberry.map((s) => {
       const sym = (s.custom ? 'c:' : 'm:') + s.name;
@@ -1019,6 +1082,32 @@ async function renderPicker() {
   g.replaceChildren(...parts);
   g.scrollTop = 0;
   if (!q.trim()) return;
+
+  // Photos load a moment after typing stops, so each keystroke isn't a search.
+  const webNote = (text) => Object.assign(document.createElement('p'), { className: 'picker-empty', textContent: text });
+  webBox.replaceChildren(pickerHeading('Photos'), webNote('Searching for photos… this can take a few seconds.'));
+  clearTimeout(webTimer);
+  webTimer = setTimeout(async () => {
+    let shown = [webNote('Connect to the internet to see photos.')];
+    if (navigator.onLine) {
+      try {
+        const found = await searchWeb(q);
+        shown = found.length
+          ? found.map((p) => {
+            const b = pickButton(webThumb(p), p.title, () => pickWebPhoto(p));
+            b.querySelector('img').onerror = () => b.remove(); // photo no longer online
+            return b;
+          })
+          : [webNote('No photos found for this word.')];
+      } catch (err) {
+        shown = [note(err.message === 'busy' ? 'Photo search is busy — wait a minute and try again.' : 'Photos could not be loaded right now.')];
+      }
+    }
+    if (run !== pickerRun) return;
+    webBox.replaceChildren(pickerHeading('Photos'),
+      Object.assign(document.createElement('p'), { className: 'picker-note', textContent: 'From Openverse. Not here? Use Google Images ↗, copy a picture, and paste it.' }),
+      ...shown);
+  }, 700);
 
   arasaacBox.replaceChildren(pickerHeading('ARASAAC'), Object.assign(document.createElement('p'), { className: 'picker-empty', textContent: 'Searching…' }));
   let found = [];
@@ -1031,8 +1120,7 @@ async function renderPicker() {
   }
   if (run !== pickerRun) return; // a newer search has started
 
-  if (!found.length && !mulberry.length && !note) note = 'No pictures found. Try another word, or use a photo.';
-  else if (!found.length && !note) note = 'No ARASAAC pictures for this word.';
+  if (!found.length && !note) note = 'No ARASAAC pictures for this word.';
   arasaacBox.replaceChildren(
     pickerHeading('ARASAAC'),
     ...found.map((p) => pickButton(arasaacImg(p.id, 300), p.words, async () => {
