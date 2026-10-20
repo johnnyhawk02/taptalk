@@ -134,7 +134,9 @@
             <button type="button" class="wide-btn ghost" id="googlePhotos" hidden>From Google Photos</button>
           </div>
         </div>
-        <p class="hint">From Google Photos: open the photo, tap <strong>Share → Copy</strong>, then come back and tap <strong>Paste photo</strong>. You can also drag a photo onto this window.</p>
+        <div class="paste-box" id="pasteBox" contenteditable="true" inputmode="none" spellcheck="false" aria-label="Press and hold here, then tap Paste">Or <strong>press and hold here</strong>, then tap <strong>Paste</strong></div>
+        <p class="hint photo-status" id="photoStatus" role="status"></p>
+        <p class="hint">To copy a photo: in Google Photos tap <strong>Share → Copy</strong>; on a web page, press and hold the picture and tap <strong>Copy</strong> (not "Copy link"). You can also drag a photo onto this window.</p>
 
         <label class="field">Word on button<input type="text" id="edLabel" required autocomplete="off" autocapitalize="none"></label>
         <label class="field">Say out loud (leave blank to say the word)<input type="text" id="edSay" autocomplete="off" autocapitalize="none"></label>

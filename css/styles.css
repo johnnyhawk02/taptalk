@@ -265,6 +265,14 @@ dialog::backdrop { background: rgba(20,20,24,0.45); }
 .swatch[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--focus); }
 
 .editor-preview { display: flex; gap: 16px; align-items: stretch; margin-top: 12px; }
+.paste-box {
+  margin-top: 10px; padding: 14px; min-height: 52px; border: 2px dashed var(--line); border-radius: 14px;
+  text-align: center; font-size: 16px; color: #48484c; background: #fafaf8;
+  -webkit-user-select: text; user-select: text; caret-color: transparent; outline: none;
+}
+.paste-box:focus { border-color: var(--focus); background: #f2f6fd; }
+.photo-status:empty { display: none; }
+.photo-status { color: var(--ink); font-weight: 600; margin: 8px 0 0; }
 .preview-tile { width: 150px; height: 150px; flex: none; --row-h: 150px; }
 .type-picker { display: flex; flex-wrap: wrap; gap: 8px; }
 .type-chip { border-radius: 12px; border: 3px solid var(--tile-line); background: var(--tile-bg); padding: 8px 12px; font-weight: 650; font-size: 15px; min-height: 44px; }

@@ -518,6 +518,7 @@ function openEditor(item, isNew = !item) {
   draftIsNew = isNew;
   draft = item ? { ...item } : { id: uid(), label: '', say: '', sym: '', type: 'noun', link: '', hidden: false };
   $('editorTitle').textContent = draftIsNew ? 'Add button' : 'Edit button';
+  photoStatus('');
   $('edLabel').value = draft.label;
   $('edSay').value = draft.say;
   $('edHidden').checked = draft.hidden;
@@ -579,15 +580,57 @@ $('edLabel').addEventListener('input', renderPreview);
 
 $('pickSymbol').addEventListener('click', () => openPicker($('edLabel').value));
 
+const photoStatus = (text) => { $('photoStatus').textContent = text; };
+
 async function usePhoto(blob) {
   if (!blob) return;
   try {
     const id = await photos.addFromFile(blob);
     draft.sym = 'u:' + id;
     renderPreview();
+    photoStatus('Photo added. Tap Save to keep it.');
   } catch (err) {
-    alert('Could not use that photo: ' + err.message);
+    photoStatus('Could not use that photo: ' + err.message);
   }
+}
+
+const LINK_ONLY = 'That copied a link, not the picture itself. Press and hold the picture and tap "Copy" '
+  + '(or save it to your photos and use "Take or pick photo").';
+
+// Copying from a web page often puts HTML or a web address on the clipboard
+// instead of the picture. Try to fetch the picture it points to; many sites
+// don't allow that, in which case we explain instead.
+async function imageFromSource(src) {
+  if (!src) return null;
+  try {
+    const res = await fetch(src, { mode: 'cors' });
+    const blob = res.ok ? await res.blob() : null;
+    return blob?.type.startsWith('image/') ? blob : null;
+  } catch {
+    return null;
+  }
+}
+
+function imgSrcFromHtml(html) {
+  return new DOMParser().parseFromString(html, 'text/html').querySelector('img')?.getAttribute('src') || '';
+}
+
+const looksLikeUrl = (text) => /^(https?:|data:image\/)\S+$/i.test(text.trim());
+
+// Works for both the Paste button (async clipboard) and paste events.
+async function pasteFrom({ files = [], html = '', text = '' }) {
+  const file = files.find((f) => f.type.startsWith('image/'));
+  if (file) { await usePhoto(file); return; }
+  const src = imgSrcFromHtml(html) || (looksLikeUrl(text) ? text.trim() : '');
+  if (src) {
+    photoStatus('Getting the picture…');
+    const blob = await imageFromSource(src);
+    if (blob) await usePhoto(blob); else photoStatus(LINK_ONLY);
+    return;
+  }
+  photoStatus(text || html
+    ? 'That was text, not a photo. Copy the photo itself and try again.'
+    : 'There is no photo to paste. Copy a photo first (in Google Photos: Share → Copy).');
 }
 
 $('photoFile').addEventListener('change', (e) => {
@@ -597,15 +640,28 @@ $('photoFile').addEventListener('change', (e) => {
 });
 
 // Google Photos (and most other apps) can copy a photo to the clipboard.
+// On iPad a small "Paste" bubble appears first; it must be tapped.
 $('pastePhoto').addEventListener('click', async () => {
+  if (!navigator.clipboard?.read) {
+    photoStatus('This browser can\'t paste with the button. Press and hold the box below, then tap Paste.');
+    return;
+  }
+  photoStatus('Tap "Paste" if a bubble appears…');
   try {
+    const files = [];
+    let html = '';
+    let text = '';
     for (const item of await navigator.clipboard.read()) {
       const type = item.types.find((t) => t.startsWith('image/'));
-      if (type) { await usePhoto(await item.getType(type)); return; }
+      if (type) files.push(new File([await item.getType(type)], 'pasted', { type }));
+      else if (item.types.includes('text/html')) html = await (await item.getType('text/html')).text();
+      else if (item.types.includes('text/plain')) text = await (await item.getType('text/plain')).text();
     }
-    alert('There is no photo to paste. In Google Photos, open the photo and tap Share → Copy first.');
+    await pasteFrom({ files, html, text });
   } catch (err) {
-    if (err.name !== 'NotAllowedError') alert('Could not paste: ' + err.message);
+    photoStatus(err.name === 'NotAllowedError'
+      ? 'The photo couldn\'t be read from the clipboard. Press and hold the box below, then tap Paste.'
+      : 'Could not paste: ' + err.message);
   }
 });
 
@@ -642,9 +698,20 @@ async function pickFromGoogle() {
 const editorEl = $('editor');
 document.addEventListener('paste', (e) => {
   if (!editorEl.open) return;
-  const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
-  if (file) { e.preventDefault(); usePhoto(file); }
+  const cd = e.clipboardData;
+  const inBox = e.target.closest?.('#pasteBox');
+  const files = [...(cd?.files || [])];
+  // Leave normal text pasting into the word fields alone.
+  if (!inBox && !files.some((f) => f.type.startsWith('image/'))) return;
+  e.preventDefault();
+  pasteFrom({ files, html: cd?.getData('text/html') || '', text: cd?.getData('text/plain') || '' });
 });
+
+// The paste box only exists to get the device's own Paste menu; never let
+// anything be typed or dropped into it.
+const PASTE_BOX_HTML = $('pasteBox').innerHTML;
+$('pasteBox').addEventListener('input', () => { $('pasteBox').innerHTML = PASTE_BOX_HTML; });
+$('pasteBox').addEventListener('beforeinput', (e) => { if (e.inputType !== 'insertFromPaste') e.preventDefault(); });
 editorEl.addEventListener('dragover', (e) => e.preventDefault());
 editorEl.addEventListener('drop', (e) => {
   const file = [...(e.dataTransfer?.files || [])].find((f) => f.type.startsWith('image/'));
