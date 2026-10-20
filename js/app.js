@@ -1,10 +1,14 @@
 import { DEFAULT_PAGES } from './board.js';
 import * as photos from './photos.js';
 import * as gphotos from './gphotos.js';
+import { TO_ARASAAC } from './migrate.js';
 
 const STORE_KEY = 'taptalk.v1';
+const STATE_VERSION = 2; // 2 = starting pictures switched to ARASAAC
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
+// The ARASAAC server re-draws pictures in these skin tones (names are theirs).
+const ARASAAC_SKIN = { '#f6d2a9': 'assian', '#e0ac7e': 'mulatto', '#c08654': 'aztec', '#8d5a33': 'black', '#5c3a21': 'black' };
 const HOLD_MS = 1500;
 const HOME = 'home';
 
@@ -47,10 +51,23 @@ function loadState() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY));
     if (raw && raw.pages && raw.pages[HOME]) {
-      return { pages: raw.pages, settings: { ...DEFAULT_SETTINGS, ...raw.settings } };
+      upgradePages(raw.pages, raw.version || 1);
+      return { pages: raw.pages, settings: { ...DEFAULT_SETTINGS, ...raw.settings }, upgraded: (raw.version || 1) < STATE_VERSION };
     }
   } catch { /* fall through to defaults */ }
   return { pages: buildDefaultPages(), settings: { ...DEFAULT_SETTINGS } };
+}
+
+// Older boards (and backups) used Mulberry pictures. Swap the ones nobody has
+// changed for their ARASAAC versions; leave edited buttons alone.
+function upgradePages(pages, version) {
+  if (version >= 2) return;
+  for (const page of Object.values(pages)) {
+    for (const item of page.items) {
+      const to = TO_ARASAAC[item.label + '|' + item.sym];
+      if (to) item.sym = to;
+    }
+  }
 }
 
 const state = loadState();
@@ -61,11 +78,12 @@ let lastTap = 0;
 
 function save() {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ pages: state.pages, settings: state.settings }));
+    localStorage.setItem(STORE_KEY, JSON.stringify({ version: STATE_VERSION, pages: state.pages, settings: state.settings }));
   } catch (err) {
     alert('Could not save changes: ' + err.message);
   }
 }
+if (state.upgraded) { delete state.upgraded; save(); }
 
 // ---------- Symbols ----------
 
@@ -75,7 +93,12 @@ function rawSymbolUrl(sym) {
   const [kind, name] = splitSym(sym);
   if (kind === 'm') return 'symbols/mulberry/' + encodeURIComponent(name) + '.svg';
   if (kind === 'c') return 'symbols/custom/' + encodeURIComponent(name) + '.svg';
+  if (kind === 'a') return 'symbols/arasaac/' + encodeURIComponent(name) + '.png';
   return '';
+}
+
+function arasaacToned(id, skin) {
+  return `https://api.arasaac.org/v1/pictograms/${encodeURIComponent(id)}?skin=${skin}&resolution=500&download=false`;
 }
 
 function splitSym(sym = '') {
@@ -98,16 +121,45 @@ async function setSymbol(img, sym) {
   if (!tone || tone === DEFAULT_SKIN) { img.src = url; return; }
 
   const key = tone + '|' + url;
-  if (!skinCache.has(key)) {
-    skinCache.set(key, fetch(url)
-      .then((r) => r.text())
-      .then((svg) => URL.createObjectURL(new Blob([svg.replace(/#ffeec8/gi, tone)], { type: 'image/svg+xml' })))
-      .catch(() => url));
-  }
+  if (!skinCache.has(key)) skinCache.set(key, tonedUrl(kind, name, url, tone));
   const want = key;
   img.dataset.want = want;
   const src = await skinCache.get(key);
   if (img.dataset.want === want) img.src = src;
+}
+
+// Blob URL of a symbol in another skin tone, or the plain URL if that fails
+// (e.g. an ARASAAC picture offline before it was ever fetched in this tone).
+async function tonedUrl(kind, name, url, tone) {
+  try {
+    if (kind === 'a') {
+      const res = await fetch(arasaacToned(name, ARASAAC_SKIN[tone] || 'white'));
+      if (!res.ok) throw new Error(res.status);
+      return URL.createObjectURL(await res.blob());
+    }
+    const svg = await fetch(url).then((r) => r.text());
+    return URL.createObjectURL(new Blob([svg.replace(/#ffeec8/gi, tone)], { type: 'image/svg+xml' }));
+  } catch {
+    return url;
+  }
+}
+
+// After a skin tone change, fetch every ARASAAC picture on the board in that
+// tone so the service worker has them for offline use.
+function prefetchToned() {
+  const tone = state.settings.skin;
+  if (!ARASAAC_SKIN[tone] || !navigator.onLine) return;
+  const ids = new Set();
+  for (const page of Object.values(state.pages)) {
+    for (const item of page.items) if (item.sym?.startsWith('a:')) ids.add(item.sym.slice(2));
+  }
+  let i = 0;
+  const list = [...ids];
+  const next = () => {
+    if (i >= list.length || state.settings.skin !== tone) return;
+    fetch(arasaacToned(list[i++], ARASAAC_SKIN[tone])).catch(() => {}).finally(next);
+  };
+  for (let k = 0; k < 4; k++) next();
 }
 
 // ---------- Speech ----------
@@ -350,7 +402,7 @@ function renderSwatches() {
     b.style.background = tone;
     b.setAttribute('aria-label', 'Skin colour');
     b.setAttribute('aria-pressed', String(tone === state.settings.skin));
-    b.addEventListener('click', () => { state.settings.skin = tone; save(); renderSwatches(); render(); renderStrip(); });
+    b.addEventListener('click', () => { state.settings.skin = tone; save(); renderSwatches(); render(); renderStrip(); prefetchToned(); });
     return b;
   }));
 }
@@ -386,7 +438,7 @@ $('resetBtn').addEventListener('click', async () => {
 
 $('exportBtn').addEventListener('click', async () => {
   const data = {
-    app: 'taptalk', version: 1, saved: new Date().toISOString(),
+    app: 'taptalk', version: 1, stateVersion: STATE_VERSION, saved: new Date().toISOString(),
     pages: state.pages, settings: state.settings, photos: await photos.exportAll(),
   };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -413,6 +465,7 @@ $('importFile').addEventListener('change', async (e) => {
     if (!confirm('Replace this board with the backup?')) return;
     await photos.clear();
     await photos.importAll(data.photos || {});
+    upgradePages(data.pages, data.stateVersion || 1);
     state.pages = data.pages;
     state.settings = { ...DEFAULT_SETTINGS, ...data.settings };
     save();
@@ -712,14 +765,14 @@ async function renderPicker() {
 
   const arasaacBox = document.createElement('div');
   arasaacBox.className = 'picker-section';
-  const parts = [];
+  // ARASAAC first (the board's own style), then Mulberry, which also works offline.
+  const parts = q.trim() ? [arasaacBox] : [];
   if (mulberry.length) {
     parts.push(pickerHeading('Mulberry'), ...mulberry.map((s) => {
       const sym = (s.custom ? 'c:' : 'm:') + s.name;
       return pickButton(rawSymbolUrl(sym), s.words, async () => sym);
     }));
   }
-  if (q.trim()) parts.push(arasaacBox);
   g.replaceChildren(...parts);
   g.scrollTop = 0;
   if (!q.trim()) return;

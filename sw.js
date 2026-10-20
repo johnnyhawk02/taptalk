@@ -4,7 +4,10 @@ const SHELL = 'taptalk-' + self.CACHE_VERSION;
 const SYMBOLS = 'taptalk-symbols'; // kept across updates
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(self.PRECACHE)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's HTTP cache, so a new version never
+  // picks up stale copies of files from the previous one.
+  const fresh = self.PRECACHE.map((url) => new Request(url, { cache: 'reload' }));
+  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -18,14 +21,18 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  // ARASAAC pictures re-drawn in another skin tone come from their server.
+  const toned = url.origin === 'https://api.arasaac.org' && url.pathname.startsWith('/v1/pictograms/') && url.searchParams.has('skin');
+  if (url.origin !== location.origin && !toned) return;
 
   event.respondWith((async () => {
-    const hit = await caches.match(req, { ignoreSearch: true });
+    const hit = await caches.match(req, { ignoreSearch: !toned });
     if (hit) return hit;
     try {
       const res = await fetch(req);
-      if (res.ok && new URL(req.url).pathname.includes('/symbols/')) {
+      if (res.ok && (toned || url.pathname.includes('/symbols/'))) {
         const copy = res.clone();
         caches.open(SYMBOLS).then((c) => c.put(req, copy));
       }

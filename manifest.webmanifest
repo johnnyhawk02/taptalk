@@ -1,7 +1,7 @@
 {
   "name": "TapTalk",
   "short_name": "TapTalk",
-  "description": "A simple picture talker (AAC) using Mulberry Symbols.",
+  "description": "A simple picture talker (AAC) using ARASAAC and Mulberry pictures.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
