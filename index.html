@@ -128,6 +128,7 @@
             <button type="button" class="wide-btn ghost" id="pickSymbol">Choose picture</button>
             <label class="wide-btn ghost file-btn">Take or pick photo<input type="file" id="photoFile" accept="image/*" hidden></label>
             <button type="button" class="wide-btn ghost" id="pastePhoto">Paste photo</button>
+            <button type="button" class="wide-btn ghost" id="googlePhotos" hidden>From Google Photos</button>
           </div>
         </div>
         <p class="hint">From Google Photos: open the photo, tap <strong>Share → Copy</strong>, then come back and tap <strong>Paste photo</strong>. You can also drag a photo onto this window.</p>
@@ -153,6 +154,20 @@
         <button class="wide-btn primary" value="save">Save</button>
       </footer>
     </form>
+  </dialog>
+
+  <!-- Google Photos pick in progress -->
+  <dialog id="gpDialog" class="sheet">
+    <div class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Google Photos</h2>
+        <button class="pill" id="gpCancel">Cancel</button>
+      </header>
+      <section>
+        <p id="gpStatus" class="gp-status">Connecting…</p>
+        <a class="wide-btn primary" id="gpOpen" target="_blank" rel="noopener" hidden>Open Google Photos</a>
+      </section>
+    </div>
   </dialog>
 
   <!-- Symbol picker -->

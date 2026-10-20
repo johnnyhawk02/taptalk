@@ -1,5 +1,6 @@
 import { DEFAULT_PAGES } from './board.js';
 import * as photos from './photos.js';
+import * as gphotos from './gphotos.js';
 
 const STORE_KEY = 'taptalk.v1';
 const DEFAULT_SKIN = '#ffeec8';
@@ -427,8 +428,8 @@ $('importFile').addEventListener('change', async (e) => {
 let draft = null;     // copy of item being edited
 let draftIsNew = false;
 
-function openEditor(item) {
-  draftIsNew = !item;
+function openEditor(item, isNew = !item) {
+  draftIsNew = isNew;
   draft = item ? { ...item } : { id: uid(), label: '', say: '', sym: '', type: 'noun', link: '', hidden: false };
   $('editorTitle').textContent = draftIsNew ? 'Add button' : 'Edit button';
   $('edLabel').value = draft.label;
@@ -521,6 +522,36 @@ $('pastePhoto').addEventListener('click', async () => {
     if (err.name !== 'NotAllowedError') alert('Could not paste: ' + err.message);
   }
 });
+
+// Straight from Google Photos (only when js/config.js is filled in).
+$('googlePhotos').hidden = !gphotos.enabled;
+$('googlePhotos').addEventListener('click', pickFromGoogle);
+
+async function pickFromGoogle() {
+  const dlg = $('gpDialog');
+  const ctrl = new AbortController();
+  const open = $('gpOpen');
+  open.hidden = true;
+  $('gpCancel').onclick = () => { ctrl.abort(); dlg.close(); };
+  // Typing in the editor may not have been saved into the draft yet.
+  draft.label = $('edLabel').value;
+  draft.say = $('edSay').value;
+  draft.hidden = $('edHidden').checked;
+  dlg.showModal();
+  try {
+    const blob = await gphotos.pick({
+      signal: ctrl.signal,
+      resume: { pageId, draft, draftIsNew },
+      status: (text) => { $('gpStatus').textContent = text; },
+      ready: (uri) => { open.href = uri; open.hidden = false; },
+    });
+    if (blob) await usePhoto(blob);
+    dlg.close();
+  } catch (err) {
+    open.hidden = true;
+    $('gpStatus').textContent = 'Something went wrong: ' + err.message;
+  }
+}
 
 const editorEl = $('editor');
 document.addEventListener('paste', (e) => {
@@ -677,3 +708,15 @@ navigator.storage?.persist?.();
 
 render();
 renderStrip();
+
+// Back from Google sign-in: reopen the editor where we left it and carry on.
+const back = gphotos.takeResume();
+if (back?.resume?.draft) {
+  const { resume } = back;
+  pageId = state.pages[resume.pageId] ? resume.pageId : HOME;
+  editing = true;
+  render();
+  openEditor(resume.draft, resume.draftIsNew);
+  if (back.ok) pickFromGoogle();
+  else if (back.error !== 'access_denied') alert('Google sign-in did not work: ' + back.error);
+}

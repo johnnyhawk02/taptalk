@@ -270,6 +270,9 @@ dialog::backdrop { background: rgba(20,20,24,0.45); }
 .type-chip { border-radius: 12px; border: 3px solid var(--tile-line); background: var(--tile-bg); padding: 8px 12px; font-weight: 650; font-size: 15px; min-height: 44px; }
 .type-chip[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--ink); }
 
+.gp-status { font-size: 18px; line-height: 1.4; margin: 16px 0; }
+a.wide-btn { text-decoration: none; }
+
 #pickerSearch { flex: 1; border: 2px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 18px; min-height: 48px; }
 .picker-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 16px 20px; align-content: start; }
 .pick { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 2px solid var(--line); border-radius: 14px; background: #fff; padding: 8px; aspect-ratio: 1 / 1.1; min-width: 0; }
