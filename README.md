@@ -16,7 +16,7 @@ A simple picture talker (AAC) for a child who doesn't speak, built as a web app 
 
 **Press and hold the small circle (top right) for 1.5 seconds.** From there you can:
 
-- **Edit buttons and pages**: tap any button to change its word, what it says, its colour or picture. You can search all 3,400+ Mulberry symbols and about 13,000 child-friendly [ARASAAC](https://arasaac.org) pictograms (ARASAAC search needs internet; a picture you choose is saved on the iPad, so it works offline afterwards), or use a photo: take one, pick one from the photo library, or **paste** one. To use a photo from **Google Photos**, open it, tap *Share → Copy*, then tap *Paste photo* in TapTalk. There is also an optional **From Google Photos** button that opens Google Photos directly; it needs a one-time setup, see [GOOGLE_PHOTOS_SETUP.md](GOOGLE_PHOTOS_SETUP.md). You can also hide, move or delete buttons, and add new buttons and pages.
+- **Edit buttons and pages**: tap any button to change its word, what it says, its colour or picture. You can search all 3,400+ Mulberry symbols and about 13,000 child-friendly [ARASAAC](https://arasaac.org) pictograms (ARASAAC search needs internet; a picture you choose is saved on the iPad, so it works offline afterwards), or use a photo: take one, pick one from the photo library, or **paste** one. To use a photo from **Google Photos**, open it, tap *Share → Copy*, then tap *Paste photo* in TapTalk. There is also an optional **From Google Photos** button that opens Google Photos directly; it needs a one-time setup, see [GOOGLE_PHOTOS_SETUP.md](GOOGLE_PHOTOS_SETUP.md). New photos open in a **picture editor**: drag to move, pinch or slide to zoom, rotate, fill the square or show the whole picture, and pick a shape (square, rounded, circle) and background. **Edit picture** reopens it later from the original photo. You can also hide, move or delete buttons, and add new buttons and pages.
 - Change the number of buttons per row, turn word labels on or off, and set "ignore repeated taps".
 - Change the **skin colour** used in the pictures. ARASAAC pictures are re-drawn by the ARASAAC server, so the first change needs internet; after that they're kept for offline use.
 - Choose the voice, speed and pitch. On iPad, you can add better voices in *Settings → Accessibility → Spoken Content → Voices* (Enhanced/Premium voices sound the most natural).
@@ -58,6 +58,7 @@ This updates `precache.js`, the list of files saved for offline use. An installe
 - `index.html`, `css/styles.css`, `js/app.js`: the app
 - `js/board.js`: the starting vocabulary
 - `js/photos.js`: caregiver photos, stored in IndexedDB
+- `js/cropper.js`: the picture editor (crop, zoom, rotate, shape)
 - `js/sync.js`: sends the board from the computer to the tablet through a private GitHub repo
 - `js/migrate.js`: swaps Mulberry pictures on older saved boards for their ARASAAC versions
 - `sw.js`, `precache.js`, `manifest.webmanifest`, `icons/`: offline support and install

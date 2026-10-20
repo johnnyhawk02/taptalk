@@ -3,6 +3,7 @@ import * as photos from './photos.js';
 import * as gphotos from './gphotos.js';
 import { TO_ARASAAC } from './migrate.js';
 import * as sync from './sync.js';
+import { editPicture, initCropper } from './cropper.js';
 
 const STORE_KEY = 'taptalk.v1';
 const STATE_VERSION = 4; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page
@@ -665,6 +666,7 @@ function renderTypePicker() {
 
 function renderPreview() {
   draft.label = $('edLabel').value;
+  $('editPicture').hidden = !draft.sym?.startsWith('u:');
   const t = tileFor({ ...draft, label: draft.label || 'word', hidden: false });
   t.classList.add('preview-tile');
   t.disabled = true;
@@ -678,17 +680,39 @@ $('pickSymbol').addEventListener('click', () => openPicker($('edLabel').value));
 
 const photoStatus = (text) => { $('photoStatus').textContent = text; };
 
+// New photos open in the picture editor first, so they fit the button neatly.
 async function usePhoto(blob) {
   if (!blob) return;
   try {
-    const id = await photos.addFromFile(blob);
-    draft.sym = 'u:' + id;
-    renderPreview();
-    photoStatus('Photo added. Tap Save to keep it.');
+    const original = await photos.shrink(blob, 1400);
+    await storeEdited(original, await editPicture(original));
   } catch (err) {
     photoStatus('Could not use that photo: ' + err.message);
   }
 }
+
+// Saves an edited picture (and the photo it came from, for re-editing) as a
+// new photo, so buttons already using the old one are unaffected.
+async function storeEdited(original, edited) {
+  if (!edited) { photoStatus('Picture not changed.'); return; }
+  const id = await photos.addBlob(edited);
+  await photos.put(id + photos.ORIGINAL, original);
+  draft.sym = 'u:' + id;
+  renderPreview();
+  photoStatus('Picture ready. Tap Save to keep it.');
+}
+
+$('editPicture').addEventListener('click', async () => {
+  const id = draft.sym?.startsWith('u:') && draft.sym.slice(2);
+  if (!id) return;
+  const original = (await photos.get(id + photos.ORIGINAL)) || (await photos.get(id));
+  if (!original) { photoStatus('That picture is not on this device.'); return; }
+  try {
+    await storeEdited(original, await editPicture(original));
+  } catch (err) {
+    photoStatus('Could not edit that picture: ' + err.message);
+  }
+});
 
 const LINK_ONLY = 'That copied a link, not the picture itself. Press and hold the picture and tap "Copy" '
   + '(or save it to your photos and use "Take or pick photo").';
@@ -1017,6 +1041,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 navigator.storage?.persist?.();
 
+initCropper();
 render();
 renderStrip();
 

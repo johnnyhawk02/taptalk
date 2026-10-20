@@ -5,6 +5,9 @@ const DB = 'taptalk-photos';
 const STORE = 'photos';
 const MAX_SIDE = 480;
 const urls = new Map();
+// The uncropped photo is kept under "<id>:orig" so the picture can be
+// re-edited later without losing quality.
+export const ORIGINAL = ':orig';
 
 let dbp = null;
 function db() {
@@ -71,6 +74,7 @@ export async function exportAll() {
   const keys = await tx('readonly', (s) => s.getAllKeys());
   const out = {};
   for (const id of keys || []) {
+    if (String(id).endsWith(ORIGINAL)) continue; // originals stay on the device that edited them
     const blob = await tx('readonly', (s) => s.get(id));
     out[id] = await new Promise((resolve) => {
       const r = new FileReader();
@@ -88,13 +92,13 @@ export async function importAll(map) {
   }
 }
 
-async function shrink(file) {
+export async function shrink(file, maxSide = MAX_SIDE) {
   const src = URL.createObjectURL(file);
   try {
     const img = new Image();
     img.src = src;
     await img.decode();
-    const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
     const w = Math.round(img.naturalWidth * scale);
     const h = Math.round(img.naturalHeight * scale);
     const canvas = document.createElement('canvas');
@@ -102,7 +106,9 @@ async function shrink(file) {
     canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
     return await new Promise((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('could not read image'))), 'image/jpeg', 0.85));
+      // Keep PNGs as PNG so see-through backgrounds stay see-through.
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('could not read image'))),
+        file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85));
   } finally {
     URL.revokeObjectURL(src);
   }

@@ -265,6 +265,18 @@ dialog::backdrop { background: rgba(20,20,24,0.45); }
 .swatch[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--focus); }
 
 .editor-preview { display: flex; gap: 16px; align-items: stretch; margin-top: 12px; }
+.crop-body { padding: 16px 20px 8px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.crop-stage { align-self: center; width: min(360px, 70vw, 48dvh); aspect-ratio: 1; }
+#cropCanvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; border-radius: 6px; box-shadow: 0 0 0 1px var(--line); }
+#cropCanvas:active { cursor: grabbing; }
+.crop-tip { text-align: center; margin: 0; }
+.crop-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; font-weight: 600; color: #48484c; }
+.crop-row > span:first-child { min-width: 92px; }
+.crop-row input[type=range] { flex: 1; accent-color: var(--focus); }
+.crop-gap { flex: 1; }
+.chip { border: 2px solid var(--line); background: #fff; border-radius: 12px; padding: 8px 14px; min-height: 44px; font-weight: 650; font-size: 15px; }
+.chip[aria-pressed="true"] { border-color: var(--focus); background: #eaf1fd; }
+
 .paste-box {
   margin-top: 10px; padding: 14px; min-height: 52px; border: 2px dashed var(--line); border-radius: 14px;
   text-align: center; font-size: 16px; color: #48484c; background: #fafaf8;

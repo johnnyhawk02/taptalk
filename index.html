@@ -150,6 +150,7 @@
             <button type="button" class="wide-btn ghost" id="pickSymbol">Choose picture</button>
             <label class="wide-btn ghost file-btn">Take or pick photo<input type="file" id="photoFile" accept="image/*" hidden></label>
             <button type="button" class="wide-btn ghost" id="pastePhoto">Paste photo</button>
+            <button type="button" class="wide-btn ghost" id="editPicture" hidden>Edit picture</button>
             <button type="button" class="wide-btn ghost" id="googlePhotos" hidden>From Google Photos</button>
           </div>
         </div>
@@ -178,6 +179,41 @@
         <button class="wide-btn primary" value="save">Save</button>
       </footer>
     </form>
+  </dialog>
+
+  <!-- Picture editor -->
+  <dialog id="cropper" class="sheet">
+    <div class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Edit picture</h2>
+        <button type="button" class="pill" id="cropCancel">Cancel</button>
+      </header>
+      <div class="crop-body">
+        <div class="crop-stage"><canvas id="cropCanvas" aria-label="Picture. Drag to move, pinch to zoom."></canvas></div>
+        <p class="hint crop-tip">Drag to move · pinch or use the slider to zoom</p>
+        <label class="crop-row"><span>Zoom</span><input type="range" id="cropZoom" min="1" max="5" step="0.01" value="1"></label>
+        <div class="crop-row">
+          <button type="button" class="chip" id="cropRotL" aria-label="Rotate left">↺</button>
+          <button type="button" class="chip" id="cropRotR" aria-label="Rotate right">↻</button>
+          <span class="crop-gap"></span>
+          <button type="button" class="chip" id="cropFill">Fill square</button>
+          <button type="button" class="chip" id="cropFit">Whole picture</button>
+        </div>
+        <div class="crop-row"><span>Shape</span>
+          <button type="button" class="chip" data-shape="square">Square</button>
+          <button type="button" class="chip" data-shape="rounded">Rounded</button>
+          <button type="button" class="chip" data-shape="circle">Circle</button>
+        </div>
+        <div class="crop-row"><span>Background</span>
+          <button type="button" class="chip" data-bg="white">White</button>
+          <button type="button" class="chip" data-bg="none">See-through</button>
+          <button type="button" class="chip" data-bg="black">Black</button>
+        </div>
+      </div>
+      <footer class="sheet-foot">
+        <button type="button" class="wide-btn primary" id="cropDone">Use picture</button>
+      </footer>
+    </div>
   </dialog>
 
   <!-- Google Photos pick in progress -->
