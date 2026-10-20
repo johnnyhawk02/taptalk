@@ -655,35 +655,97 @@ async function openPicker(query) {
   await renderPicker();
 }
 
+// ARASAAC (arasaac.org) has ~13,000 child-friendly pictograms and a free,
+// open search API. Results need a connection; a chosen picture is saved on
+// the device like a photo, so it works offline and goes into backups.
+const ARASAAC_API = 'https://api.arasaac.org/v1/pictograms/en/search/';
+const arasaacImg = (id, size) => `https://static.arasaac.org/pictograms/${id}/${id}_${size}.png`;
+let pickerRun = 0;
+
+async function searchArasaac(q) {
+  q = q.trim();
+  if (!q || !navigator.onLine) return [];
+  const res = await fetch(ARASAAC_API + encodeURIComponent(q));
+  if (res.status === 404) return []; // no matches
+  if (!res.ok) throw new Error('ARASAAC ' + res.status);
+  return (await res.json()).slice(0, 60).map((p) => ({ id: p._id, words: p.keywords?.[0]?.keyword || q }));
+}
+
+function pickButton(src, words, onPick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'pick';
+  const img = document.createElement('img');
+  img.loading = 'lazy';
+  img.src = src;
+  img.alt = '';
+  const span = document.createElement('span');
+  span.textContent = words;
+  b.append(img, span);
+  b.addEventListener('click', async () => {
+    try {
+      draft.sym = await onPick();
+    } catch {
+      alert('Could not get that picture. Check the internet connection and try again.');
+      return;
+    }
+    if (!$('edLabel').value) $('edLabel').value = words;
+    renderPreview();
+    $('picker').close();
+  });
+  return b;
+}
+
+function pickerHeading(text) {
+  const h = document.createElement('h4');
+  h.className = 'picker-heading';
+  h.textContent = text;
+  return h;
+}
+
 async function renderPicker() {
+  const run = ++pickerRun;
+  const q = $('pickerSearch').value;
   const index = await getIndex();
-  const results = searchSymbols(index, $('pickerSearch').value);
+  const mulberry = searchSymbols(index, q).slice(0, q.trim() ? 60 : 150);
   const g = $('pickerGrid');
-  if (!results.length) {
-    g.innerHTML = '<p class="picker-empty">No pictures found. Try another word, or use a photo.</p>';
-    return;
+
+  const arasaacBox = document.createElement('div');
+  arasaacBox.className = 'picker-section';
+  const parts = [];
+  if (mulberry.length) {
+    parts.push(pickerHeading('Mulberry'), ...mulberry.map((s) => {
+      const sym = (s.custom ? 'c:' : 'm:') + s.name;
+      return pickButton(rawSymbolUrl(sym), s.words, async () => sym);
+    }));
   }
-  g.replaceChildren(...results.map((s) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'pick';
-    const sym = (s.custom ? 'c:' : 'm:') + s.name;
-    const img = document.createElement('img');
-    img.loading = 'lazy';
-    img.src = rawSymbolUrl(sym);
-    img.alt = '';
-    const span = document.createElement('span');
-    span.textContent = s.words;
-    b.append(img, span);
-    b.addEventListener('click', () => {
-      draft.sym = sym;
-      if (!$('edLabel').value) $('edLabel').value = s.words;
-      renderPreview();
-      $('picker').close();
-    });
-    return b;
-  }));
+  if (q.trim()) parts.push(arasaacBox);
+  g.replaceChildren(...parts);
   g.scrollTop = 0;
+  if (!q.trim()) return;
+
+  arasaacBox.replaceChildren(pickerHeading('ARASAAC'), Object.assign(document.createElement('p'), { className: 'picker-empty', textContent: 'Searching…' }));
+  let found = [];
+  let note = '';
+  try {
+    found = await searchArasaac(q);
+    if (!navigator.onLine) note = 'Connect to the internet to see ARASAAC pictures.';
+  } catch {
+    note = 'ARASAAC pictures could not be loaded right now.';
+  }
+  if (run !== pickerRun) return; // a newer search has started
+
+  if (!found.length && !mulberry.length && !note) note = 'No pictures found. Try another word, or use a photo.';
+  else if (!found.length && !note) note = 'No ARASAAC pictures for this word.';
+  arasaacBox.replaceChildren(
+    pickerHeading('ARASAAC'),
+    ...found.map((p) => pickButton(arasaacImg(p.id, 300), p.words, async () => {
+      const res = await fetch(arasaacImg(p.id, 500));
+      if (!res.ok) throw new Error(res.status);
+      return 'u:' + await photos.addBlob(await res.blob());
+    })),
+    ...(note ? [Object.assign(document.createElement('p'), { className: 'picker-empty', textContent: note })] : []),
+  );
 }
 
 let searchTimer = 0;

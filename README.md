@@ -14,7 +14,7 @@ A simple picture talker (AAC) for a child who doesn't speak, built as a web app 
 
 **Press and hold the small circle (top right) for 1.5 seconds.** From there you can:
 
-- **Edit buttons and pages**: tap any button to change its word, what it says, its colour or picture. You can search all 3,400+ Mulberry symbols or use a photo: take one, pick one from the photo library, or **paste** one. To use a photo from **Google Photos**, open it, tap *Share → Copy*, then tap *Paste photo* in TapTalk. There is also an optional **From Google Photos** button that opens Google Photos directly; it needs a one-time setup, see [GOOGLE_PHOTOS_SETUP.md](GOOGLE_PHOTOS_SETUP.md). You can also hide, move or delete buttons, and add new buttons and pages.
+- **Edit buttons and pages**: tap any button to change its word, what it says, its colour or picture. You can search all 3,400+ Mulberry symbols and about 13,000 child-friendly [ARASAAC](https://arasaac.org) pictograms (ARASAAC search needs internet; a picture you choose is saved on the iPad, so it works offline afterwards), or use a photo: take one, pick one from the photo library, or **paste** one. To use a photo from **Google Photos**, open it, tap *Share → Copy*, then tap *Paste photo* in TapTalk. There is also an optional **From Google Photos** button that opens Google Photos directly; it needs a one-time setup, see [GOOGLE_PHOTOS_SETUP.md](GOOGLE_PHOTOS_SETUP.md). You can also hide, move or delete buttons, and add new buttons and pages.
 - Change the number of buttons per row, turn word labels on or off, and set "ignore repeated taps".
 - Change the **skin colour** used in the pictures (six tones).
 - Choose the voice, speed and pitch. On iPad, you can add better voices in *Settings → Accessibility → Spoken Content → Voices* (Enhanced/Premium voices sound the most natural).
@@ -58,8 +58,10 @@ This updates `precache.js`, the list of files saved for offline use. An installe
 - `sw.js`, `precache.js`, `manifest.webmanifest`, `icons/`: offline support and install
 - `symbols/mulberry/`: the full Mulberry Symbols set (SVG)
 - `symbols/custom/`: six extra symbols Mulberry doesn't have (I, you, stop, please, thank you, again)
-- `symbols/index.json`: the search index for the picture picker
+- `symbols/index.json`: the search index for the picture picker (ARASAAC is searched online through its free API)
 
 ## Licence and credits
 
 Symbols: **Mulberry Symbols** © Steve Lee, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (see `symbols/mulberry/LICENSE.txt`). The custom symbols in `symbols/custom/` are shared under the same licence.
+
+ARASAAC pictograms are the property of the Government of Aragón and were created by Sergio Palao for [ARASAAC](https://arasaac.org), which shares them under [CC BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/) (non-commercial use).

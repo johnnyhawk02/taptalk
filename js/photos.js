@@ -43,6 +43,13 @@ export async function addFromFile(file) {
   return id;
 }
 
+// Stores an image as-is (already small, e.g. a downloaded symbol PNG).
+export async function addBlob(blob) {
+  const id = 'ph' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  await tx('readwrite', (s) => s.put(blob, id));
+  return id;
+}
+
 export async function clear() {
   await tx('readwrite', (s) => s.clear());
   urls.forEach((u) => URL.revokeObjectURL(u));
