@@ -1,0 +1,65 @@
+# TapTalk
+
+A simple picture talker (AAC) for a child who doesn't speak, built as a web app you can install on an iPad. It uses [Mulberry Symbols](https://mulberrysymbols.org) and works offline once installed.
+
+## What the child sees
+
+- **Home board**: 18 core words that are always in the same place (I, want, more, help, stop, yes, you, go, like, don't like, all done, no, eat, drink, play, toilet, hurt, wait) and 12 pages (Food, Drinks, Play, Feelings, People, Places, Actions, Describe, Body, Animals, Colours, Chat). That's 256 buttons in total.
+- Tapping a button says the word and adds it to the sentence bar at the top. Tapping the bar says the whole sentence. ⌫ removes the last word and ✕ clears the bar.
+- After choosing a word from a page, it goes back to Home, so core words are always one tap away.
+- Colours show the word type (Fitzgerald key): yellow is people, green is actions, blue is describing, orange is things, pink is social, red is no/stop and purple is questions. Pages are grey, with a folder tab.
+- Child-proofing: pinch-zoom, text selection and long-press menus are blocked. Hidden buttons leave a blank gap so nothing moves around.
+
+## Grown-up settings
+
+**Press and hold the small circle (top right) for 1.5 seconds.** From there you can:
+
+- **Edit buttons and pages**: tap any button to change its word, what it says, its colour or picture. You can search all 3,400+ Mulberry symbols or use a photo (from the camera or your photo library). You can also hide, move or delete buttons, and add new buttons and pages.
+- Change the number of buttons per row, turn word labels on or off, and set "ignore repeated taps".
+- Change the **skin colour** used in the pictures (six tones).
+- Choose the voice, speed and pitch. On iPad, you can add better voices in *Settings → Accessibility → Spoken Content → Voices* (Enhanced/Premium voices sound the most natural).
+- **Save a backup** (buttons, photos and settings in one file, sent through the share sheet) and **load** it on another device.
+
+## Putting it on the iPad
+
+The iPad has to load the app over **HTTPS** once. After that it works offline.
+
+1. Host this folder on any static web host, for example GitHub Pages, Netlify or Cloudflare Pages. No build step is needed.
+2. On the iPad, open the URL in **Safari**, tap **Share**, then **Add to Home Screen**.
+3. Open TapTalk from the home screen icon. It runs full-screen.
+
+Tip: turn on **Guided Access** (*Settings → Accessibility → Guided Access*, then triple-click the side or top button inside TapTalk). It keeps the child in the app.
+
+Note: the home screen app has its own storage, separate from Safari. Make your edits inside the installed app, and use *Save backup* now and then.
+
+## Running it locally
+
+```bash
+python3 -m http.server 8642
+```
+
+Then open http://localhost:8642.
+
+## Changing the starting board or app files
+
+The starting vocabulary is in `js/board.js`. After changing it, or any app file, run:
+
+```bash
+node tools/build-precache.mjs
+```
+
+This updates `precache.js`, the list of files saved for offline use. An installed iPad picks up the new version the next time the app is opened while online. It may take one extra relaunch.
+
+## Files
+
+- `index.html`, `css/styles.css`, `js/app.js`: the app
+- `js/board.js`: the starting vocabulary
+- `js/photos.js`: caregiver photos, stored in IndexedDB
+- `sw.js`, `precache.js`, `manifest.webmanifest`, `icons/`: offline support and install
+- `symbols/mulberry/`: the full Mulberry Symbols set (SVG)
+- `symbols/custom/`: six extra symbols Mulberry doesn't have (I, you, stop, please, thank you, again)
+- `symbols/index.json`: the search index for the picture picker
+
+## Licence and credits
+
+Symbols: **Mulberry Symbols** © Steve Lee, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (see `symbols/mulberry/LICENSE.txt`). The custom symbols in `symbols/custom/` are shared under the same licence.

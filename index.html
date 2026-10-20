@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>TapTalk</title>
+  <meta name="description" content="A simple picture talker (AAC) using Mulberry Symbols.">
+  <meta name="theme-color" content="#f6f4ef">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="TapTalk">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <button class="bar-btn home-btn" id="homeBtn" aria-label="Home">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 22 24 8l16 14v18a2 2 0 0 1-2 2H29V30h-10v12H10a2 2 0 0 1-2-2Z"/></svg>
+      </button>
+
+      <div class="strip" id="strip" role="button" aria-label="Sentence. Tap to speak.">
+        <div class="strip-words" id="stripWords"></div>
+      </div>
+
+      <button class="bar-btn" id="backspaceBtn" aria-label="Remove last word">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 10h22a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H18L4 24Z"/><path class="x" d="m23 18 12 12m0-12L23 30"/></svg>
+      </button>
+      <button class="bar-btn" id="clearBtn" aria-label="Clear sentence">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path class="x" d="m12 12 24 24m0-24L12 36"/></svg>
+      </button>
+
+      <button class="bar-btn lock-btn" id="lockBtn" aria-label="Grown-up settings. Press and hold.">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <circle class="ring-bg" cx="24" cy="24" r="21"/>
+          <circle class="ring" id="lockRing" cx="24" cy="24" r="21"/>
+          <path class="gear" d="M24 16a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="page-head" id="pageHead">
+      <h1 id="pageTitle">Home</h1>
+      <div class="edit-banner" id="editBanner" hidden>
+        <span>Editing — tap a button to change it</span>
+        <button class="pill" id="doneEditing">Done</button>
+      </div>
+    </div>
+
+    <main class="grid" id="grid" aria-live="off"></main>
+  </div>
+
+  <!-- Grown-up settings -->
+  <dialog id="settings" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Grown-up settings</h2>
+        <button class="pill" value="close">Close</button>
+      </header>
+
+      <section>
+        <h3>Board</h3>
+        <button type="button" class="wide-btn" id="startEditing">Edit buttons and pages</button>
+        <label class="row">Buttons per row
+          <select id="setCols">
+            <option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+          </select>
+        </label>
+        <label class="row">Show words under pictures <input type="checkbox" id="setLabels"></label>
+        <label class="row">Go back to Home after choosing from a page <input type="checkbox" id="setAutoHome"></label>
+        <label class="row">Ignore repeated taps for
+          <select id="setDebounce">
+            <option value="0">off</option><option value="400">½ second</option>
+            <option value="1000">1 second</option><option value="2000">2 seconds</option>
+          </select>
+        </label>
+        <div class="row">Skin colour in pictures
+          <div class="swatches" id="skinSwatches"></div>
+        </div>
+      </section>
+
+      <section>
+        <h3>Voice</h3>
+        <label class="row">Speak each word when tapped <input type="checkbox" id="setSpeakTap"></label>
+        <label class="row">Voice <select id="setVoice"></select></label>
+        <label class="row">Speed <input type="range" id="setRate" min="0.5" max="1.5" step="0.05"></label>
+        <label class="row">Pitch <input type="range" id="setPitch" min="0.5" max="1.8" step="0.05"></label>
+        <button type="button" class="wide-btn ghost" id="testVoice">Test voice</button>
+      </section>
+
+      <section>
+        <h3>Backup</h3>
+        <p class="hint">Save everything (buttons, photos, settings) to a file, or load a saved file on another iPad.</p>
+        <div class="btn-row">
+          <button type="button" class="wide-btn ghost" id="exportBtn">Save backup</button>
+          <label class="wide-btn ghost file-btn">Load backup<input type="file" id="importFile" accept="application/json,.json" hidden></label>
+        </div>
+        <button type="button" class="wide-btn danger" id="resetBtn">Reset to starting board</button>
+      </section>
+
+      <section class="about">
+        <h3>About</h3>
+        <p>Symbols from <strong>Mulberry Symbols</strong> © Steve Lee, used under
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>
+          — <a href="https://mulberrysymbols.org" target="_blank" rel="noopener">mulberrysymbols.org</a>.
+          A few extra symbols (I, you, stop, please, thank you, again) were drawn for TapTalk and are shared under the same licence.</p>
+        <p class="hint" id="installHint"></p>
+      </section>
+    </form>
+  </dialog>
+
+  <!-- Button editor -->
+  <dialog id="editor" class="sheet">
+    <form method="dialog" class="sheet-inner" id="editorForm">
+      <header class="sheet-head">
+        <h2 id="editorTitle">Edit button</h2>
+        <button class="pill" value="cancel" formnovalidate>Cancel</button>
+      </header>
+
+      <div class="editor-body">
+        <div class="editor-preview">
+          <div class="tile preview-tile" id="previewTile"></div>
+          <div class="btn-col">
+            <button type="button" class="wide-btn ghost" id="pickSymbol">Choose picture</button>
+            <label class="wide-btn ghost file-btn">Take or pick photo<input type="file" id="photoFile" accept="image/*" hidden></label>
+          </div>
+        </div>
+
+        <label class="field">Word on button<input type="text" id="edLabel" required autocomplete="off" autocapitalize="none"></label>
+        <label class="field">Say out loud (leave blank to say the word)<input type="text" id="edSay" autocomplete="off" autocapitalize="none"></label>
+
+        <div class="field">Colour
+          <div class="type-picker" id="typePicker"></div>
+        </div>
+
+        <label class="row" id="folderRow">Opens a page <select id="edLink"></select></label>
+        <label class="row">Hide this button from the child <input type="checkbox" id="edHidden"></label>
+
+        <div class="btn-row" id="moveRow">
+          <button type="button" class="wide-btn ghost" id="moveBack">◀ Move earlier</button>
+          <button type="button" class="wide-btn ghost" id="moveFwd">Move later ▶</button>
+        </div>
+      </div>
+
+      <footer class="sheet-foot">
+        <button type="button" class="wide-btn danger" id="deleteBtn">Delete button</button>
+        <button class="wide-btn primary" value="save">Save</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Symbol picker -->
+  <dialog id="picker" class="sheet tall">
+    <div class="sheet-inner">
+      <header class="sheet-head">
+        <input type="search" id="pickerSearch" placeholder="Search 3,400+ Mulberry pictures…" autocomplete="off" autocapitalize="none">
+        <button class="pill" id="pickerClose">Close</button>
+      </header>
+      <div class="picker-grid" id="pickerGrid"></div>
+    </div>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
