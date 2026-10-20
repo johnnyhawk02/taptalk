@@ -63,6 +63,7 @@ export const DEFAULT_PAGES = {
   play: {
     name: 'Play',
     items: [
+      F('Fun', 'a:36481', 'fun'),
       ['toys', 'a:9813', 'noun'], ['ball', 'a:2269', 'noun'], ['bubbles', 'a:6945', 'noun'],
       ['lego', 'a:8508', 'noun'], ['blocks', 'a:4921', 'noun'], ['puzzle', 'a:2540', 'noun'],
       ['teddy', 'a:4945', 'noun'], ['doll', 'a:2482', 'noun'], ['dinosaur', 'a:2738', 'noun'],
@@ -72,6 +73,22 @@ export const DEFAULT_PAGES = {
       ['swing', 'a:4608', 'noun'], ['slide', 'a:4759', 'noun'], ['trampoline', 'a:23891', 'noun'],
       ['music', 'a:24795', 'noun'], ['TV', 'a:25498', 'noun'], ['games', 'a:37464', 'noun'],
       ['headphones', 'a:5915', 'noun'], ['lights', 'a:8155', 'noun'], ['kite', 'a:2350', 'noun'],
+    ],
+  },
+
+  fun: {
+    name: 'Fun',
+    items: [
+      ['Mr Tumble', 'a:31426', 'noun'], ['Singing Hands', 'a:11754', 'noun'], ['CBeebies', 'a:9802', 'noun'],
+      ['iPad', 'a:29151', 'noun'], ['YouTube', 'a:29153', 'noun'], ['TV', 'a:25498', 'noun'],
+      ['film', 'a:4602', 'noun'], ['Peppa Pig', 'a:2327', 'noun'], ['Bluey', 'a:2517', 'noun'],
+      ['music', 'a:24795', 'noun'], ['songs', 'a:2315', 'noun'], ['dance', 'a:2652', 'verb'],
+      ['games', 'a:37464', 'noun'], ['colouring', 'a:2348', 'verb'], ['baking', 'a:5487', 'verb'],
+      ['bubbles', 'a:6945', 'noun'], ['soft play', 'a:8191', 'noun'], ['trampoline', 'a:23891', 'noun'],
+      ['swimming', 'a:25038', 'noun'], ['park', 'a:26296', 'noun'], ['swing', 'a:4608', 'noun'],
+      ['bike ride', 'a:5517', 'verb'], ['walk', 'a:37345', 'verb'], ['chase', 'a:7037', 'verb'],
+      ['hide and seek', 'a:4642', 'verb'], ['tickles', 'a:5480', 'verb'], ['play with friends', 'a:2439', 'verb'],
+      ['sensory room', 'a:8217', 'noun'],
     ],
   },
 

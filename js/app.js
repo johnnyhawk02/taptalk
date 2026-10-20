@@ -4,7 +4,7 @@ import * as gphotos from './gphotos.js';
 import { TO_ARASAAC } from './migrate.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 3; // 2 = starting pictures switched to ARASAAC, 3 = place pages added
+const STATE_VERSION = 4; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -70,7 +70,7 @@ function upgradePages(pages, version) {
       }
     }
   }
-  if (version < 3) addMissingPages(pages);
+  if (version < 4) addMissingPages(pages);
 }
 
 // New starting pages (e.g. School, Bedtime) get added to saved boards, with
