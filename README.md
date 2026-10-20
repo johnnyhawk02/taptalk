@@ -4,7 +4,8 @@ A simple picture talker (AAC) for a child who doesn't speak, built as a web app 
 
 ## What the child sees
 
-- **Home board**: 18 core words that are always in the same place (I, want, more, help, stop, yes, you, go, like, don't like, all done, no, eat, drink, play, toilet, hurt, wait) and 12 pages (Food, Drinks, Play, Feelings, People, Places, Actions, Describe, Body, Animals, Colours, Chat). That's 256 buttons in total.
+- **Home board**: 18 core words that are always in the same place (I, want, more, help, stop, yes, you, go, like, don't like, all done, no, eat, drink, play, toilet, hurt, wait) and 12 pages (Food, Drinks, Play, Feelings, People, Places, Actions, Describe, Body, Animals, Colours, Chat). That's 21 pages and 394 buttons in total.
+- **Places** opens 8 place pages: School, Home, Park, Shops, Doctor, Car & bus, Bedtime and Bath time. Each has the words you need there. On these pages, choosing a word keeps the page open so you can build a sentence, and **back** goes up one level.
 - Tapping a button says the word and adds it to the sentence bar at the top. Tapping the bar says the whole sentence. ⌫ removes the last word and ✕ clears the bar.
 - After choosing a word from a page, it goes back to Home, so core words are always one tap away.
 - Colours show the word type (Fitzgerald key): yellow is people, green is actions, blue is describing, orange is things, pink is social, red is no/stop and purple is questions. Pages are grey, with a folder tab.

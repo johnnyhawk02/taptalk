@@ -4,7 +4,7 @@ import * as gphotos from './gphotos.js';
 import { TO_ARASAAC } from './migrate.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 2; // 2 = starting pictures switched to ARASAAC
+const STATE_VERSION = 3; // 2 = starting pictures switched to ARASAAC, 3 = place pages added
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -39,6 +39,7 @@ function buildDefaultPages() {
   for (const [pageId, page] of Object.entries(DEFAULT_PAGES)) {
     pages[pageId] = {
       name: page.name,
+      ...(page.stay && { stay: true }),
       items: page.items.map(([label, sym, type, extra = {}]) => ({
         id: uid(), label, sym, type, say: extra.say || '', link: extra.link || '', hidden: false,
       })),
@@ -61,12 +62,28 @@ function loadState() {
 // Older boards (and backups) used Mulberry pictures. Swap the ones nobody has
 // changed for their ARASAAC versions; leave edited buttons alone.
 function upgradePages(pages, version) {
-  if (version >= 2) return;
-  for (const page of Object.values(pages)) {
-    for (const item of page.items) {
-      const to = TO_ARASAAC[item.label + '|' + item.sym];
-      if (to) item.sym = to;
+  if (version < 2) {
+    for (const page of Object.values(pages)) {
+      for (const item of page.items) {
+        const to = TO_ARASAAC[item.label + '|' + item.sym];
+        if (to) item.sym = to;
+      }
     }
+  }
+  if (version < 3) addMissingPages(pages);
+}
+
+// New starting pages (e.g. School, Bedtime) get added to saved boards, with
+// their buttons put at the front of the page that opens them.
+function addMissingPages(pages) {
+  const defaults = buildDefaultPages();
+  const added = Object.keys(defaults).filter((id) => !pages[id]);
+  for (const id of added) pages[id] = defaults[id];
+  for (const [parentId, parent] of Object.entries(defaults)) {
+    if (!pages[parentId] || added.includes(parentId)) continue;
+    const links = parent.items.filter((it) => it.type === 'folder' && added.includes(it.link)
+      && !pages[parentId].items.some((mine) => mine.link === it.link));
+    pages[parentId].items.unshift(...links);
   }
 }
 
@@ -246,7 +263,7 @@ function backTile() {
   const b = document.createElement('button');
   b.className = 'tile back';
   b.dataset.action = 'back';
-  b.setAttribute('aria-label', 'Back to Home');
+  b.setAttribute('aria-label', 'Back');
   b.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M30 10 16 24l14 14"/></svg><span class="label">back</span>';
   return b;
 }
@@ -292,8 +309,23 @@ function renderStrip() {
 
 // ---------- Interaction ----------
 
+// Pages opened from other pages remember the way back, so "back" on School
+// returns to Places rather than Home.
+let trail = [];
+
 function goTo(id) {
-  pageId = state.pages[id] ? id : HOME;
+  const next = state.pages[id] ? id : HOME;
+  if (next === HOME) trail = [];
+  else if (next !== pageId) trail.push(pageId);
+  pageId = next;
+  grid.scrollTop = 0;
+  render();
+}
+
+function goBack() {
+  const prev = trail.pop();
+  pageId = prev && state.pages[prev] ? prev : HOME;
+  if (pageId === HOME) trail = [];
   grid.scrollTop = 0;
   render();
 }
@@ -307,7 +339,7 @@ grid.addEventListener('click', (e) => {
   const tile = e.target.closest('.tile');
   if (!tile) return;
 
-  if (tile.dataset.action === 'back') { goTo(HOME); return; }
+  if (tile.dataset.action === 'back') { goBack(); return; }
   if (tile.dataset.action === 'add') { openEditor(null); return; }
 
   const item = findItem(tile.dataset.id);
@@ -328,7 +360,8 @@ grid.addEventListener('click', (e) => {
   sentence.push({ label: item.label, say: item.say || item.label, sym: item.sym, type: item.type });
   renderStrip();
   if (state.settings.speakOnTap) speak(item.say || item.label);
-  if (state.settings.autoHome && pageId !== HOME) goTo(HOME);
+  // Place pages (School, Park…) stay open: you often want several words there.
+  if (state.settings.autoHome && pageId !== HOME && !state.pages[pageId].stay) goTo(HOME);
 });
 
 function findItem(id) {

@@ -10,7 +10,8 @@
 // "u:<id>" = a photo or picture added by a caregiver.
 //
 // Each item is [label, symbol, type, extra] where extra may hold
-// { say: 'spoken text', link: 'pageId' }.
+// { say: 'spoken text', link: 'pageId' }. A page with stay: true doesn't
+// jump back to Home after a word is chosen (used for the place pages).
 
 const F = (label, sym, link) => [label, sym, 'folder', { link }];
 
@@ -100,11 +101,116 @@ export const DEFAULT_PAGES = {
   places: {
     name: 'Places',
     items: [
-      ['home', 'a:6964', 'noun'], ['school', 'a:3082', 'noun'], ['park', 'a:26296', 'noun'],
-      ['outside', 'a:5475', 'noun'], ['playground', 'a:2859', 'noun'], ['shop', 'a:8986', 'noun'],
-      ['car', 'a:2339', 'noun'], ['bus', 'a:2262', 'noun'], ['swimming', 'a:25038', 'noun'],
-      ['beach', 'a:2826', 'noun'], ['bed', 'a:2304', 'noun'], ['bath', 'a:2272', 'noun'],
-      ['toilet', 'a:2430', 'noun'], ['sensory room', 'a:8217', 'noun'], ['doctor', 'a:2467', 'noun'],
+      F('School', 'a:3082', 'school'), F('Home', 'a:2317', 'athome'), F('Park', 'a:32987', 'park'), F('Shops', 'a:6618', 'shops'),
+      F('Doctor', 'a:8263', 'doctor'), F('Car & bus', 'a:6981', 'travel'), F('Bedtime', 'a:28623', 'bedtime'), F('Bath time', 'a:31853', 'bathtime'),
+
+      ['outside', 'a:5475', 'noun'], ['playground', 'a:2859', 'noun'], ['swimming', 'a:25038', 'noun'],
+      ['beach', 'a:2826', 'noun'], ['toilet', 'a:2430', 'noun'], ['sensory room', 'a:8217', 'noun'],
+    ],
+  },
+  school: {
+    name: 'School',
+    stay: true,
+    items: [
+      ['school', 'a:3082', 'noun'], ['teacher', 'a:2457', 'pron'], ['friend', 'a:8487', 'pron'],
+      ['classroom', 'a:39686', 'noun'], ['playground', 'a:2859', 'noun'], ['play time', 'a:27339', 'noun'],
+      ['lunch', 'a:4609', 'noun'], ['lunch box', 'a:39457', 'noun'], ['toilet', 'a:2430', 'noun'],
+      ['book', 'a:2450', 'noun'], ['pencil', 'a:2440', 'noun'], ['paper', 'a:2398', 'noun'],
+      ['scissors', 'a:6664', 'noun'], ['glue', 'a:2510', 'noun'], ['paint', 'a:2348', 'noun'],
+      ['computer', 'a:7190', 'noun'], ['music', 'a:24795', 'noun'], ['PE', 'a:10258', 'noun'],
+      ['story', 'a:8346', 'noun'], ['sit down', 'a:25082', 'verb'], ['line up', 'a:7102', 'verb'],
+      ['my bag', 'a:2475', 'noun'], ['coat', 'a:27978', 'noun'], ['home time', 'a:16805', 'noun'],
+    ],
+  },
+
+  athome: {
+    name: 'At home',
+    stay: true,
+    items: [
+      ['home', 'a:6964', 'noun'], ['mum', 'a:2458', 'pron'], ['dad', 'a:31146', 'pron'],
+      ['bedroom', 'a:5988', 'noun'], ['kitchen', 'a:33070', 'noun'], ['living room', 'a:33074', 'noun'],
+      ['garden', 'a:30608', 'noun'], ['sofa', 'a:2571', 'noun'], ['TV', 'a:25498', 'noun'],
+      ['tablet', 'a:29151', 'noun'], ['toys', 'a:9813', 'noun'], ['snack', 'a:28206', 'noun'],
+      ['dinner', 'a:4592', 'noun'], ['bath', 'a:2272', 'noun'], ['bed', 'a:2304', 'noun'],
+      ['cuddle', 'a:6023', 'verb'], ['door', 'a:3244', 'noun'], ['window', 'a:2611', 'noun'],
+      ['light', 'a:4936', 'noun'], ['music', 'a:24795', 'noun'], ['outside', 'a:5475', 'noun'],
+      ['quiet', 'a:5936', 'desc'],
+    ],
+  },
+
+  park: {
+    name: 'Park',
+    stay: true,
+    items: [
+      ['park', 'a:26296', 'noun'], ['swing', 'a:4608', 'noun'], ['slide', 'a:4759', 'noun'],
+      ['roundabout', 'a:38554', 'noun'], ['see-saw', 'a:4572', 'noun'], ['climbing frame', 'a:8226', 'noun'],
+      ['sandpit', 'a:4565', 'noun'], ['ball', 'a:2269', 'noun'], ['bike', 'a:2277', 'noun'],
+      ['scooter', 'a:2508', 'noun'], ['ducks', 'a:2563', 'noun'], ['tree', 'a:3057', 'noun'],
+      ['run', 'a:2719', 'verb'], ['push me', 'a:5430', 'verb'], ['higher', 'a:5388', 'desc'],
+      ['again', 'a:37163', 'desc'], ['my turn', 'a:7158', 'social'], ['ice cream', 'a:3348', 'noun'],
+      ['home time', 'a:16805', 'noun'],
+    ],
+  },
+
+  shops: {
+    name: 'Shops',
+    stay: true,
+    items: [
+      ['shop', 'a:8986', 'noun'], ['trolley', 'a:5948', 'noun'], ['basket', 'a:26748', 'noun'],
+      ['money', 'a:4630', 'noun'], ['buy', 'a:8985', 'verb'], ['pay', 'a:39710', 'verb'],
+      ['sweets', 'a:2686', 'noun'], ['snack', 'a:28206', 'noun'], ['juice', 'a:11461', 'noun'],
+      ['toy', 'a:32568', 'noun'], ['clothes', 'a:7233', 'noun'], ['shoes', 'a:24801', 'noun'],
+      ['wait', 'a:8109', 'verb'], ['car', 'a:2339', 'noun'], ['help', 'a:4570', 'verb'],
+      ['go home', 'a:16805', 'verb'],
+    ],
+  },
+
+  doctor: {
+    name: 'Doctor',
+    stay: true,
+    items: [
+      ['doctor', 'a:2467', 'pron'], ['nurse', 'a:31390', 'pron'], ['dentist', 'a:11229', 'pron'],
+      ['medicine', 'a:2962', 'noun'], ['plaster', 'a:8331', 'noun'], ['hurt', 'a:5484', 'desc'],
+      ['ears', 'a:2871', 'noun'], ['mouth', 'a:2663', 'noun'], ['tummy', 'a:2786', 'noun'],
+      ['temperature', 'a:2789', 'noun'], ['injection', 'a:5601', 'noun'], ['scared', 'a:2261', 'desc'],
+      ['brave', 'a:36163', 'desc'], ['sticker', 'a:4932', 'noun'], ['all done', 'a:28429', 'social'],
+    ],
+  },
+
+  travel: {
+    name: 'Car & bus',
+    stay: true,
+    items: [
+      ['car', 'a:2339', 'noun'], ['bus', 'a:2262', 'noun'], ['train', 'a:2603', 'noun'],
+      ['seatbelt', 'a:5962', 'noun'], ['window', 'a:2611', 'noun'], ['music', 'a:24795', 'noun'],
+      ['where are we going?', 'a:7764', 'q'], ['are we there yet?', 'a:16805', 'q'], ['stop', 'a:8289', 'neg'],
+      ['go', 'a:2432', 'verb'], ['home', 'a:6964', 'noun'], ['school', 'a:3082', 'noun'],
+      ['park', 'a:26296', 'noun'], ['shop', 'a:8986', 'noun'], ['too hot', 'a:2300', 'desc'],
+      ['feel sick', 'a:31795', 'desc'],
+    ],
+  },
+
+  bedtime: {
+    name: 'Bedtime',
+    stay: true,
+    items: [
+      ['bed', 'a:2304', 'noun'], ['pyjamas', 'a:2522', 'noun'], ['brush teeth', 'a:2326', 'verb'],
+      ['toilet', 'a:2430', 'noun'], ['story', 'a:8346', 'noun'], ['teddy', 'a:4945', 'noun'],
+      ['cuddle', 'a:6023', 'verb'], ['light on', 'a:8103', 'verb'], ['light off', 'a:8027', 'verb'],
+      ['water', 'a:2248', 'noun'], ['tired', 'a:2314', 'desc'], ['night night', 'a:26997', 'social'],
+      ['scared', 'a:2261', 'desc'], ['dark', 'a:26993', 'desc'],
+    ],
+  },
+
+  bathtime: {
+    name: 'Bath time',
+    stay: true,
+    items: [
+      ['bath', 'a:2272', 'noun'], ['shower', 'a:2371', 'noun'], ['bubbles', 'a:6945', 'noun'],
+      ['soap', 'a:2964', 'noun'], ['shampoo', 'a:2699', 'noun'], ['towel', 'a:2593', 'noun'],
+      ['bath toys', 'a:28577', 'noun'], ['wash hair', 'a:35037', 'verb'], ['hot', 'a:2300', 'desc'],
+      ['cold', 'a:35557', 'desc'], ['wet', 'a:4697', 'desc'], ['dry', 'a:2566', 'desc'],
+      ['all done', 'a:28429', 'social'],
     ],
   },
 
