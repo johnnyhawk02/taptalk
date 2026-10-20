@@ -492,17 +492,46 @@ $('edLabel').addEventListener('input', renderPreview);
 
 $('pickSymbol').addEventListener('click', () => openPicker($('edLabel').value));
 
-$('photoFile').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  e.target.value = '';
-  if (!file) return;
+async function usePhoto(blob) {
+  if (!blob) return;
   try {
-    const id = await photos.addFromFile(file);
+    const id = await photos.addFromFile(blob);
     draft.sym = 'u:' + id;
     renderPreview();
   } catch (err) {
     alert('Could not use that photo: ' + err.message);
   }
+}
+
+$('photoFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  usePhoto(file);
+});
+
+// Google Photos (and most other apps) can copy a photo to the clipboard.
+$('pastePhoto').addEventListener('click', async () => {
+  try {
+    for (const item of await navigator.clipboard.read()) {
+      const type = item.types.find((t) => t.startsWith('image/'));
+      if (type) { await usePhoto(await item.getType(type)); return; }
+    }
+    alert('There is no photo to paste. In Google Photos, open the photo and tap Share → Copy first.');
+  } catch (err) {
+    if (err.name !== 'NotAllowedError') alert('Could not paste: ' + err.message);
+  }
+});
+
+const editorEl = $('editor');
+document.addEventListener('paste', (e) => {
+  if (!editorEl.open) return;
+  const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
+  if (file) { e.preventDefault(); usePhoto(file); }
+});
+editorEl.addEventListener('dragover', (e) => e.preventDefault());
+editorEl.addEventListener('drop', (e) => {
+  const file = [...(e.dataTransfer?.files || [])].find((f) => f.type.startsWith('image/'));
+  if (file) { e.preventDefault(); usePhoto(file); }
 });
 
 $('moveBack').addEventListener('click', () => moveItem(-1));

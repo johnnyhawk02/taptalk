@@ -37,7 +37,7 @@ export async function url(id) {
 }
 
 export async function addFromFile(file) {
-  const blob = await shrink(file);
+  const blob = await shrink(file); // any image Blob or File
   const id = 'ph' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   await tx('readwrite', (s) => s.put(blob, id));
   return id;

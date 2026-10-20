@@ -14,7 +14,7 @@ A simple picture talker (AAC) for a child who doesn't speak, built as a web app 
 
 **Press and hold the small circle (top right) for 1.5 seconds.** From there you can:
 
-- **Edit buttons and pages**: tap any button to change its word, what it says, its colour or picture. You can search all 3,400+ Mulberry symbols or use a photo (from the camera or your photo library). You can also hide, move or delete buttons, and add new buttons and pages.
+- **Edit buttons and pages**: tap any button to change its word, what it says, its colour or picture. You can search all 3,400+ Mulberry symbols or use a photo: take one, pick one from the photo library, or **paste** one. To use a photo from **Google Photos**, open it, tap *Share → Copy*, then tap *Paste photo* in TapTalk. You can also hide, move or delete buttons, and add new buttons and pages.
 - Change the number of buttons per row, turn word labels on or off, and set "ignore repeated taps".
 - Change the **skin colour** used in the pictures (six tones).
 - Choose the voice, speed and pitch. On iPad, you can add better voices in *Settings → Accessibility → Spoken Content → Voices* (Enhanced/Premium voices sound the most natural).
