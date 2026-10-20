@@ -8,7 +8,7 @@ import { DEFAULT_PAGES } from '../js/board.js';
 
 const shell = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
-  'js/app.js', 'js/board.js', 'js/photos.js', 'js/gphotos.js', 'js/config.js', 'js/migrate.js', 'symbols/index.json',
+  'js/app.js', 'js/board.js', 'js/photos.js', 'js/gphotos.js', 'js/config.js', 'js/migrate.js', 'js/sync.js', 'symbols/index.json',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 const syms = new Set(readdirSync('symbols/custom').map((f) => 'symbols/custom/' + f));

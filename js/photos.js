@@ -50,6 +50,17 @@ export async function addBlob(blob) {
   return id;
 }
 
+export async function get(id) {
+  return (await tx('readonly', (s) => s.get(id))) || null;
+}
+
+// Stores an image under a known id (used when receiving a synced board).
+export async function put(id, blob) {
+  await tx('readwrite', (s) => s.put(blob, id));
+  const old = urls.get(id);
+  if (old) { URL.revokeObjectURL(old); urls.delete(id); }
+}
+
 export async function clear() {
   await tx('readwrite', (s) => s.clear());
   urls.forEach((u) => URL.revokeObjectURL(u));

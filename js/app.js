@@ -2,6 +2,7 @@ import { DEFAULT_PAGES } from './board.js';
 import * as photos from './photos.js';
 import * as gphotos from './gphotos.js';
 import { TO_ARASAAC } from './migrate.js';
+import * as sync from './sync.js';
 
 const STORE_KEY = 'taptalk.v1';
 const STATE_VERSION = 4; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page
@@ -225,6 +226,11 @@ function render() {
   document.documentElement.classList.toggle('no-labels', !state.settings.labels);
   document.body.classList.toggle('editing', editing);
   $('editBanner').hidden = !editing;
+  const syncMode = sync.config().mode;
+  $('sendFromBanner').hidden = syncMode !== 'send';
+  $('editHint').textContent = syncMode === 'receive'
+    ? 'Editing — changes made here are replaced by the next update from the computer'
+    : 'Editing — tap a button to change it';
   $('pageTitle').textContent = page.name;
   grid.style.setProperty('--cols', state.settings.cols);
 
@@ -377,7 +383,7 @@ $('strip').addEventListener('click', async () => {
 });
 
 $('backspaceBtn').addEventListener('click', () => { sentence.pop(); renderStrip(); });
-$('clearBtn').addEventListener('click', () => { sentence = []; renderStrip(); speechSynthesis?.cancel(); });
+$('clearBtn').addEventListener('click', () => { sentence = []; renderStrip(); speechSynthesis?.cancel(); applyPendingBoard(); });
 $('homeBtn').addEventListener('click', () => goTo(HOME));
 
 // Press and hold to open grown-up settings, so the child can't open it by accident.
@@ -414,6 +420,7 @@ function openSettings() {
   $('setPitch').value = s.pitch;
   fillVoiceSelect();
   renderSwatches();
+  fillSyncFields();
   $('installHint').textContent = isStandalone()
     ? 'Installed on this device — works offline.'
     : 'To install on iPad: open in Safari, tap Share, then "Add to Home Screen".';
@@ -455,7 +462,7 @@ bindSetting('setPitch', 'pitch', (el) => Number(el.value));
 $('testVoice').addEventListener('click', () => speak('Hello! I want to play.'));
 
 $('startEditing').addEventListener('click', () => { $('settings').close(); editing = true; render(); });
-$('doneEditing').addEventListener('click', () => { editing = false; render(); });
+$('doneEditing').addEventListener('click', () => { editing = false; render(); applyPendingBoard(); });
 
 $('resetBtn').addEventListener('click', async () => {
   if (!confirm('Reset to the starting board? Your changes and photos will be removed.')) return;
@@ -508,6 +515,95 @@ $('importFile').addEventListener('change', async (e) => {
     alert('Could not load backup: ' + err.message);
   }
 });
+
+// ---------- Computer → tablet sync ----------
+
+const syncStatus = (text) => { $('syncStatus').textContent = text; };
+const when = (iso) => (iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'never');
+
+function fillSyncFields() {
+  const c = sync.config();
+  $('syncMode').value = c.mode;
+  $('syncRepo').value = c.repo;
+  $('syncToken').value = c.token;
+  $('syncFields').hidden = c.mode === 'off';
+  $('syncSend').hidden = c.mode !== 'send';
+  $('syncCheck').hidden = c.mode !== 'receive';
+  syncStatus(c.mode === 'send' ? 'Last sent: ' + when(c.lastSent)
+    : c.mode === 'receive' ? 'Last updated: ' + when(c.lastReceived) : '');
+}
+
+$('syncMode').addEventListener('change', (e) => {
+  sync.setConfig({ mode: e.target.value });
+  fillSyncFields();
+  render();
+  if (e.target.value === 'receive') checkForBoard(true);
+});
+$('syncRepo').addEventListener('change', (e) => sync.setConfig({ repo: e.target.value.trim() }));
+$('syncToken').addEventListener('change', (e) => sync.setConfig({ token: e.target.value.trim() }));
+
+async function sendBoard(report = syncStatus) {
+  try {
+    const sent = await sync.send({ pages: state.pages, settings: state.settings, stateVersion: STATE_VERSION }, report);
+    report('Sent ' + when(sent) + '. The tablet will update next time it checks (when TapTalk is opened, or within 5 minutes).');
+  } catch (err) {
+    report('Could not send: ' + err.message);
+  }
+}
+
+$('syncSend').addEventListener('click', () => sendBoard());
+$('sendFromBanner').addEventListener('click', async () => {
+  const btn = $('sendFromBanner');
+  btn.disabled = true;
+  await sendBoard((text) => { btn.textContent = text.length > 40 ? 'Sending…' : text; });
+  btn.textContent = sync.config().lastSent ? 'Sent ✓' : 'Send to tablet';
+  btn.disabled = false;
+  setTimeout(() => { btn.textContent = 'Send to tablet'; }, 4000);
+});
+$('syncCheck').addEventListener('click', () => checkForBoard(true));
+
+let pendingBoard = null;
+let checking = false;
+
+// Only swap the board when Robyn isn't in the middle of something.
+function safeToSwap() {
+  return !editing && sentence.length === 0 && !document.querySelector('dialog[open]');
+}
+
+async function checkForBoard(manual = false) {
+  const c = sync.config();
+  if (c.mode !== 'receive' || !c.token || checking || !navigator.onLine) return;
+  checking = true;
+  try {
+    if (manual) syncStatus('Checking…');
+    const update = await sync.fetchUpdate();
+    if (update) { pendingBoard = update.board; applyPendingBoard(manual); }
+    else if (manual) syncStatus('Already up to date. Last updated: ' + when(c.lastReceived));
+  } catch (err) {
+    if (manual) syncStatus('Could not check: ' + err.message);
+  } finally {
+    checking = false;
+  }
+}
+
+function applyPendingBoard(force = false) {
+  if (!pendingBoard) return;
+  if (!force && !safeToSwap()) { setTimeout(applyPendingBoard, 20_000); return; }
+  const board = pendingBoard;
+  pendingBoard = null;
+  const before = state.settings.skin;
+  upgradePages(board.pages, board.stateVersion || 1);
+  state.pages = board.pages;
+  const keep = Object.fromEntries(sync.LOCAL_SETTINGS.map((k) => [k, state.settings[k]]));
+  state.settings = { ...DEFAULT_SETTINGS, ...board.settings, ...keep };
+  save();
+  sync.markReceived(board.updated);
+  if (!state.pages[pageId]) { pageId = HOME; trail = []; }
+  render();
+  renderStrip();
+  if (state.settings.skin !== before) prefetchToned();
+  if ($('settings').open) fillSyncFields();
+}
 
 // ---------- Button editor ----------
 
@@ -923,6 +1019,10 @@ navigator.storage?.persist?.();
 
 render();
 renderStrip();
+
+checkForBoard();
+setInterval(checkForBoard, 5 * 60_000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForBoard(); });
 
 // Back from Google sign-in: reopen the editor where we left it and carry on.
 const back = gphotos.takeResume();

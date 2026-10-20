@@ -20,6 +20,7 @@ A simple picture talker (AAC) for a child who doesn't speak, built as a web app 
 - Change the number of buttons per row, turn word labels on or off, and set "ignore repeated taps".
 - Change the **skin colour** used in the pictures. ARASAAC pictures are re-drawn by the ARASAAC server, so the first change needs internet; after that they're kept for offline use.
 - Choose the voice, speed and pitch. On iPad, you can add better voices in *Settings → Accessibility → Spoken Content → Voices* (Enhanced/Premium voices sound the most natural).
+- **Edit on a computer, update the tablet**: link a computer and the tablet, then press *Send to tablet*. See [SYNC_SETUP.md](SYNC_SETUP.md).
 - **Save a backup** (buttons, photos and settings in one file, sent through the share sheet) and **load** it on another device.
 
 ## Putting it on the iPad
@@ -57,6 +58,7 @@ This updates `precache.js`, the list of files saved for offline use. An installe
 - `index.html`, `css/styles.css`, `js/app.js`: the app
 - `js/board.js`: the starting vocabulary
 - `js/photos.js`: caregiver photos, stored in IndexedDB
+- `js/sync.js`: sends the board from the computer to the tablet through a private GitHub repo
 - `js/migrate.js`: swaps Mulberry pictures on older saved boards for their ARASAAC versions
 - `sw.js`, `precache.js`, `manifest.webmanifest`, `icons/`: offline support and install
 - `symbols/arasaac/`: the ARASAAC pictograms used by the starting board (PNG)
