@@ -452,7 +452,8 @@ $('homeBtn').addEventListener('click', () => goTo(HOME));
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     btn.classList.add('holding');
-    timer = setTimeout(() => { cancel(); openSettings(); }, HOLD_MS);
+    // Holding goes straight into editing; ⚙ Settings in the edit bar has the rest.
+    timer = setTimeout(() => { cancel(); setEditing(true); }, HOLD_MS);
   });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => btn.addEventListener(ev, cancel));
   btn.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -468,6 +469,7 @@ new ResizeObserver(sizeRows).observe(grid);
 
 function openSettings() {
   const s = state.settings;
+  $('startEditing').hidden = editing;
   $('setCols').value = String(s.cols);
   $('setLabels').checked = s.labels;
   $('setAutoHome').checked = s.autoHome;
@@ -534,6 +536,7 @@ function setEditing(on) {
 
 $('startEditing').addEventListener('click', () => { $('settings').close(); setEditing(true); });
 $('doneEditing').addEventListener('click', () => setEditing(false));
+$('settingsFromBanner').addEventListener('click', openSettings);
 
 // On the editing computer (never seen by Robyn) there's an Edit button in the
 // top bar and a keyboard shortcut: E to start or finish, Esc to finish.

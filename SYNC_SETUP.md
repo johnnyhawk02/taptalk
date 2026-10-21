@@ -24,7 +24,7 @@ If a token is lost or expires, just make a new one. If the iPad is ever lost, de
 
 ## 2. Link the computer
 
-In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari or Chrome), hold the circle at the top right to open grown-up settings:
+In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari or Chrome), hold the circle at the top right, then tap **⚙ Settings** in the purple bar:
 
 1. Under **Share the board between devices**, set **This device** to **Edits the board (computer)**.
 2. Paste the computer token.
@@ -32,7 +32,7 @@ In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari 
 
 ## 3. Link Robyn's iPad
 
-On the iPad, in TapTalk's grown-up settings:
+On the iPad, hold the circle at the top right, then tap **⚙ Settings** in the purple bar:
 
 1. Set **This device** to **Gets the board and sends its changes (school iPad)**.
 2. Paste the iPad token. It fetches the shared board straight away. The first time, the iPad takes the shared board as it is.
@@ -42,11 +42,11 @@ On the iPad, in TapTalk's grown-up settings:
 ## Day to day
 
 - **On the computer:** click **Edit** (or press **E**), make your changes, then press **Send to tablet** in the purple bar. Press **E** or **Esc** to stop editing. While editing, the computer shows a smaller view so whole pages fit. **Full-size view** shows it the size Robyn sees it.
-- **At school:** hold the circle → **Edit buttons and pages**, make changes, and tap **Done**. They're sent automatically.
+- **At school:** hold the circle (top right) to start editing, make changes, and tap **Done**. They're sent automatically.
 - **To pick up changes right away**, on either device: grown-up settings → **Check for changes now**.
 ## Automatic or manual
 
-Each device has two tick boxes in grown-up settings, under **Share the board between devices**:
+Each device has two tick boxes in **⚙ Settings** (hold the circle, then tap ⚙ Settings), under **Share the board between devices**:
 
 | Setting | Ticked | Unticked |
 |---|---|---|

@@ -137,7 +137,7 @@ button { cursor: pointer; }
   flex: none;
 }
 .page-head h1 { margin: 0 4px; font-size: 22px; font-weight: 700; color: var(--muted); }
-.edit-banner { display: flex; align-items: center; gap: 12px; background: var(--q-bg); border: 2px solid var(--q); padding: 4px 6px 4px 14px; border-radius: 999px; font-weight: 600; }
+.edit-banner { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 12px; background: var(--q-bg); border: 2px solid var(--q); padding: 4px 6px 4px 14px; border-radius: 999px; font-weight: 600; }
 .edit-banner[hidden] { display: none; }
 
 /* ---------- Grid ---------- */
