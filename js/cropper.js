@@ -29,17 +29,19 @@ const BACKGROUNDS = { white: '#ffffff', none: null, black: '#1d1d1f' };
 
 let view = null; // current editing session
 
-export function editPicture(blob) {
+// opts can preset the view, e.g. { fit: true, shape: 'square', bg: 'none' }
+// for a drawn picture that should keep its see-through background.
+export function editPicture(blob, opts = {}) {
   return new Promise((resolve) => {
     const src = URL.createObjectURL(blob);
     const img = new Image();
-    img.onload = () => start(img, src, resolve);
+    img.onload = () => start(img, src, resolve, opts);
     img.onerror = () => { URL.revokeObjectURL(src); resolve(null); };
     img.src = src;
   });
 }
 
-function start(img, src, resolve) {
+function start(img, src, resolve, opts) {
   view = {
     img, src, resolve,
     rot: 0,          // quarter turns
@@ -48,6 +50,7 @@ function start(img, src, resolve) {
     fit: false,      // false = fill the square, true = show the whole picture
     shape: 'rounded',
     bg: 'white',
+    ...opts,
   };
   $('cropZoom').value = '1';
   syncChips();

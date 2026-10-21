@@ -7,6 +7,7 @@ import { editPicture, initCropper } from './cropper.js';
 import { openSheet } from './sheet.js';
 import { merge, fingerprint } from './merge.js';
 import * as piper from './piper.js';
+import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
 const STATE_VERSION = 6; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip
@@ -888,6 +889,9 @@ function openSettings() {
   $('setCols').value = String(s.cols);
   $('setRows').value = String(s.rows || 5);
   $('setSidebar').checked = s.sidebar;
+  $('aiKey').value = ai.key();
+  $('aiQuality').value = s.aiQuality || 'low';
+  $('aiPrompt').value = s.aiPrompt || ai.DEFAULT_PROMPT;
   $('setCoreStrip').checked = s.coreStrip;
   $('setLabels').checked = s.labels;
   $('setAutoHome').checked = s.autoHome;
@@ -1350,14 +1354,123 @@ $('edLabel').addEventListener('input', renderPreview);
 
 $('pickSymbol').addEventListener('click', () => openPicker($('edLabel').value));
 
+// ---------- Make a picture with AI ----------
+// Four choices at once, numbered 1–4; the chosen one goes to the picture
+// editor, keeping its see-through background.
+
+let makerRun = null;   // AbortController for the pictures being made
+let makerSlots = [];
+
+function openMaker() {
+  if (!ai.key()) { photoStatus('To make pictures, add an OpenAI key in ⚙ Settings → Pictures.'); return; }
+  $('makerSubject').value = $('edLabel').value.trim();
+  makerSlots = [];
+  drawMakerSlots();
+  $('makerGo').textContent = 'Make 4';
+  $('makerStatus').textContent = '';
+  openSheet($('maker'));
+  if ($('makerSubject').value) makeFour(); else $('makerSubject').focus();
+}
+
+function drawMakerSlots() {
+  $('makerGrid').replaceChildren(...[0, 1, 2, 3].map((i) => {
+    const slot = makerSlots[i];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `maker-slot t-${draft.type === 'folder' ? 'noun' : draft.type}` + (!slot ? ' empty' : ` ${slot.state}`);
+    b.innerHTML = `<span class="num">${i + 1}</span>`;
+    if (slot?.state === 'ready') {
+      const img = document.createElement('img');
+      img.src = slot.url;
+      img.alt = `Choice ${i + 1}`;
+      b.append(img);
+    } else if (slot?.state === 'failed') {
+      b.append(document.createTextNode("Couldn't make this one"));
+    }
+    b.addEventListener('click', () => pickMade(i));
+    return b;
+  }));
+}
+
+async function makeFour() {
+  const text = $('makerSubject').value.trim();
+  if (!text) { $('makerStatus').textContent = 'Type what the picture should show.'; $('makerSubject').focus(); return; }
+  makerRun?.abort();
+  const run = makerRun = new AbortController();
+  for (const slot of makerSlots) if (slot?.url) URL.revokeObjectURL(slot.url);
+  const prompt = `${state.settings.aiPrompt || ai.DEFAULT_PROMPT}\n${ai.subjectFor(text, draft.type)}`;
+  const quality = state.settings.aiQuality || 'low';
+  makerSlots = [0, 1, 2, 3].map(() => ({ state: 'loading' }));
+  drawMakerSlots();
+  $('makerStatus').textContent = `Making 4 pictures (about ${4 * ai.PENCE[quality]}p). This takes about half a minute…`;
+  const errors = [];
+  await Promise.all(makerSlots.map(async (slot) => {
+    try {
+      slot.blob = await ai.make(prompt, { quality, signal: run.signal });
+      slot.url = URL.createObjectURL(slot.blob);
+      slot.state = 'ready';
+    } catch (err) {
+      if (run.signal.aborted) return;
+      slot.state = 'failed';
+      errors.push(err.message);
+    }
+    if (run === makerRun) drawMakerSlots();
+  }));
+  if (run !== makerRun) return;
+  const made = makerSlots.filter((x) => x.state === 'ready').length;
+  $('makerGo').textContent = 'Make 4 more';
+  $('makerStatus').textContent = made
+    ? `Tap the best one (or press 1–4). Not right? Change the words and make 4 more.${errors.length ? ` (${errors.length} didn't work: ${errors[0]})` : ''}`
+    : errors[0] || 'No pictures came back. Try again.';
+}
+
+function pickMade(i) {
+  const slot = makerSlots[i];
+  if (slot?.state !== 'ready') return;
+  closeMaker();
+  usePhoto(slot.blob, { fit: true, shape: 'square', bg: 'none' });
+}
+
+function closeMaker() {
+  makerRun?.abort();
+  makerRun = null;
+  if ($('maker').open) $('maker').close();
+}
+
+$('makePicture').addEventListener('click', openMaker);
+$('makerGo').addEventListener('click', makeFour);
+$('makerClose').addEventListener('click', closeMaker);
+$('maker').addEventListener('cancel', () => { makerRun?.abort(); makerRun = null; });
+$('makerSubject').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); makeFour(); } });
+$('maker').addEventListener('keydown', (e) => {
+  if (e.target === $('makerSubject') || !/^[1-4]$/.test(e.key)) return;
+  e.preventDefault();
+  pickMade(Number(e.key) - 1);
+});
+
+$('aiKey').addEventListener('change', (e) => ai.setKey(e.target.value));
+$('aiQuality').addEventListener('change', (e) => { state.settings.aiQuality = e.target.value; touchSettings(); markChanged(); save(); });
+$('aiPrompt').addEventListener('change', (e) => {
+  const text = e.target.value.trim();
+  // Blank means the original style (stored as '' so it syncs).
+  state.settings.aiPrompt = text === ai.DEFAULT_PROMPT ? '' : text;
+  e.target.value = text || ai.DEFAULT_PROMPT;
+  touchSettings(); markChanged(); save();
+});
+$('aiPromptReset').addEventListener('click', () => {
+  state.settings.aiPrompt = '';
+  $('aiPrompt').value = ai.DEFAULT_PROMPT;
+  touchSettings(); markChanged(); save();
+});
+
 const photoStatus = (text) => { $('photoStatus').textContent = text; };
 
 // New photos open in the picture editor first, so they fit the button neatly.
-async function usePhoto(blob) {
+async function usePhoto(blob, cropOpts) {
   if (!blob) return;
   try {
     const original = await photos.shrink(blob, 1400);
-    await storeEdited(original, await editPicture(original));
+    await storeEdited(original, await editPicture(original, cropOpts));
   } catch (err) {
     photoStatus('Could not use that photo: ' + err.message);
   }

@@ -83,6 +83,7 @@
       <div class="tabs" role="tablist" aria-label="Settings">
         <button type="button" class="tab" role="tab" data-tab="board">Board &amp; voice</button>
         <button type="button" class="tab" role="tab" data-tab="share">Sharing</button>
+        <button type="button" class="tab" role="tab" data-tab="ai">Pictures</button>
         <button type="button" class="tab" role="tab" data-tab="backup">Backup &amp; help</button>
       </div>
       <div class="settings-body">
@@ -146,6 +147,23 @@
         </div>
       </section>
         </div>
+        <div class="tab-panel" role="tabpanel" data-panel="ai" hidden>
+      <section>
+        <h3>Make pictures with AI</h3>
+        <p class="hint">In the button editor, <strong>✨ Make picture</strong> draws four choices to pick from, using OpenAI.
+          Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a> (it needs some credit).</p>
+        <label class="field">OpenAI key (kept on this device only)<input type="password" id="aiKey" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="sk-…"></label>
+        <label class="row">Quality
+          <select id="aiQuality">
+            <option value="low">Low – about 1p a picture</option>
+            <option value="medium">Medium – about 3p a picture</option>
+            <option value="high">High – about 13p a picture</option>
+          </select>
+        </label>
+        <label class="field">Style for every picture (the word is added after this)<textarea id="aiPrompt" rows="5" autocapitalize="sentences"></textarea></label>
+        <button type="button" class="pill" id="aiPromptReset">Back to the original style</button>
+      </section>
+        </div>
         <div class="tab-panel two-col" role="tabpanel" data-panel="backup" hidden>
           <div>
       <section id="trashSection" hidden>
@@ -200,6 +218,7 @@
             <button type="button" class="wide-btn ghost" id="pickSymbol">Choose picture</button>
             <label class="wide-btn ghost file-btn">Take or pick photo<input type="file" id="photoFile" accept="image/*" hidden></label>
             <button type="button" class="wide-btn ghost" id="pastePhoto">Paste photo</button>
+            <button type="button" class="wide-btn ghost" id="makePicture">✨ Make picture</button>
             <button type="button" class="wide-btn ghost" id="editPicture" hidden>Edit picture</button>
             <button type="button" class="wide-btn ghost" id="googlePhotos" hidden>From Google Photos</button>
           </div>
@@ -233,6 +252,24 @@
         <button class="wide-btn primary" value="save">Save</button>
       </footer>
     </form>
+  </dialog>
+
+  <!-- Make a picture with AI: four choices -->
+  <dialog id="maker" class="sheet">
+    <div class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Make a picture</h2>
+        <button type="button" class="pill" id="makerClose">Close</button>
+      </header>
+      <div class="maker-body">
+        <div class="maker-bar">
+          <input type="text" id="makerSubject" autocomplete="off" autocapitalize="none" aria-label="What the picture shows" placeholder="What should it show? e.g. pink scooter">
+          <button type="button" class="wide-btn primary" id="makerGo">Make 4</button>
+        </div>
+        <div class="maker-grid" id="makerGrid"></div>
+        <p class="hint" id="makerStatus" role="status"></p>
+      </div>
+    </div>
   </dialog>
 
   <!-- Picture editor -->
