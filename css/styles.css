@@ -487,3 +487,15 @@ body.has-clip .undo-bar { bottom: calc(var(--safe-b) + 92px); }
   background: linear-gradient(to bottom, transparent, var(--tile-bg) 72%);
 }
 .tile.fill::before, .tile.fill::after { z-index: 2; }
+
+/* Make a page from words */
+.nav-make { padding: 14px 20px 0; flex: none; }
+.nav-make .wide-btn { margin: 0; }
+#pageMaker { width: min(640px, calc(100vw - 32px)); }
+.page-maker-body { padding: 4px 20px 10px; overflow: auto; min-height: 0; }
+.page-maker-body textarea { min-height: 110px; }
+#pagePreview { min-height: 1.4em; color: var(--ink); }
+#pagePreview b { font-weight: 750; }
+
+/* Dashed "add" buttons keep a visible edge even with outlines turned off */
+.tile.add-tile, .nav-add { border-width: max(3px, var(--btn-line, 4px)); }

@@ -573,6 +573,103 @@ function openNavPicker() {
 }
 $('navPickerClose').addEventListener('click', () => $('navPicker').close());
 
+// ---------- Make a page from words ----------
+// "The Gruffalo, gruffalo, mouse, fox": the first is the page's name, the rest
+// become its buttons, each with the best ARASAAC picture TapTalk can find.
+
+function parseWords(text) {
+  const parts = text.split(/[,\n]+/).map((w) => w.trim()).filter(Boolean);
+  const seen = new Set();
+  const words = parts.slice(1).filter((w) => !seen.has(w.toLowerCase()) && seen.add(w.toLowerCase())).slice(0, 48);
+  return { name: parts[0] || '', words };
+}
+
+function showPagePreview() {
+  const { name, words } = parseWords($('pageWords').value);
+  const out = $('pagePreview');
+  out.replaceChildren();
+  $('pageMake').disabled = !name || !words.length;
+  if (!name) return;
+  const b = document.createElement('b');
+  b.textContent = name;
+  out.append('Page ', b, words.length ? `: ${words.length} button${words.length > 1 ? 's' : ''} (${words.join(', ')})` : ': now add some words after a comma');
+}
+
+// The best picture for a word: an ARASAAC picture whose keyword is the word,
+// else ARASAAC's first match, else a Mulberry picture on this device.
+async function pictureFor(word) {
+  try {
+    const found = await searchArasaac(word);
+    const exact = found.find((p) => p.words.toLowerCase() === word.toLowerCase());
+    const pick = exact || found[0];
+    if (pick) {
+      const res = await fetch(arasaacImg(pick.id, 500));
+      if (res.ok) return 'u:' + await photos.addBlob(await res.blob());
+    }
+  } catch { /* offline or ARASAAC unavailable: try Mulberry */ }
+  const hit = searchSymbols(await getIndex(), word).find((s) => !s.custom && s.words === word.toLowerCase());
+  return hit ? 'm:' + hit.name : '';
+}
+
+async function makePage() {
+  const { name, words } = parseWords($('pageWords').value);
+  if (!name || !words.length) return;
+  const btn = $('pageMake');
+  btn.disabled = true;
+  const syms = [];
+  for (const [i, word] of words.entries()) {
+    btn.textContent = `Finding pictures ${i + 1} of ${words.length}…`;
+    syms.push(await pictureFor(word));
+  }
+  const at = now();
+  const id = 'p' + uid();
+  const items = words.map((label, i) => ({ id: uid(), label, say: '', sym: syms[i], type: 'noun', link: '', hidden: false, updatedAt: at }));
+  // A story or topic page stays open while Robyn picks several words.
+  state.pages[id] = { name, items, icon: syms.find(Boolean) || '', stay: true, updatedAt: at, orderAt: at };
+  let link = null;
+  if (state.settings.sidebar) {
+    state.settings.nav = [...state.settings.nav, id];
+    touchSettings();
+  } else {
+    link = { id: uid(), label: name, say: '', sym: syms.find(Boolean) || '', type: 'folder', link: id, hidden: false, updatedAt: at };
+    state.pages[HOME].items.push(link);
+    state.pages[HOME].orderAt = at;
+  }
+  markChanged();
+  save();
+  btn.textContent = 'Make page';
+  $('pageMaker').close();
+  goTo(id, { fromNav: true });
+  const missing = syms.filter((s) => !s).length;
+  offerUndo(`Made “${name}”${missing ? `: ${missing} without a picture yet` : ''}`, () => {
+    delete state.pages[id];
+    state.deleted['page:' + id] = now();
+    for (const it of items) state.deleted[it.id] = now();
+    if (link) {
+      state.pages[HOME].items = state.pages[HOME].items.filter((it) => it.id !== link.id);
+      state.deleted[link.id] = now();
+    }
+    state.settings.nav = state.settings.nav.filter((n) => n !== id);
+    touchSettings();
+    goTo(HOME);
+    afterRestore();
+  });
+}
+
+function openPageMaker() {
+  if ($('navPicker').open) $('navPicker').close();
+  $('pageWords').value = '';
+  $('pageMake').textContent = 'Make page';
+  showPagePreview();
+  openSheet($('pageMaker'));
+  $('pageWords').focus();
+}
+
+$('openPageMaker').addEventListener('click', openPageMaker);
+$('pageWords').addEventListener('input', showPagePreview);
+$('pageMake').addEventListener('click', makePage);
+$('pageMakerClose').addEventListener('click', () => $('pageMaker').close());
+
 // ---------- Interaction ----------
 
 // Pages opened from other pages remember the way back, so "back" on School

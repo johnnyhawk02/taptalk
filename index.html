@@ -339,7 +339,28 @@
         <h2>Add to the page column</h2>
         <button type="button" class="pill" id="navPickerClose">Close</button>
       </header>
+      <div class="nav-make"><button type="button" class="wide-btn primary" id="openPageMaker">✨ Make a new page from words</button></div>
       <div class="nav-list" id="navList"></div>
+    </div>
+  </dialog>
+
+  <!-- Make a page from a list of words -->
+  <dialog id="pageMaker" class="sheet">
+    <div class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Make a page from words</h2>
+        <button type="button" class="pill" id="pageMakerClose">Close</button>
+      </header>
+      <div class="page-maker-body">
+        <label class="field">Page name first, then its words (commas or new lines)
+          <textarea id="pageWords" rows="4" autocapitalize="none" spellcheck="true" placeholder="The Gruffalo, gruffalo, mouse, fox, owl, snake, trees"></textarea>
+        </label>
+        <p class="hint" id="pagePreview" role="status"></p>
+        <p class="hint">TapTalk finds an ARASAAC picture for each word. Any it can't find get just the word: tap the button afterwards to choose a picture or ✨ make one.</p>
+      </div>
+      <footer class="sheet-foot">
+        <button type="button" class="wide-btn primary" id="pageMake" disabled>Make page</button>
+      </footer>
     </div>
   </dialog>
 
