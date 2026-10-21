@@ -485,7 +485,19 @@ function renderTrash() {
   }));
 }
 
+// Settings tabs; the last one used is remembered.
+const TAB_KEY = 'taptalk.settingsTab';
+function showTab(name) {
+  for (const t of document.querySelectorAll('#settings .tab')) t.setAttribute('aria-selected', String(t.dataset.tab === name));
+  for (const p of document.querySelectorAll('#settings .tab-panel')) p.hidden = p.dataset.panel !== name;
+  try { sessionStorage.setItem(TAB_KEY, name); } catch { /* not important */ }
+}
+for (const t of document.querySelectorAll('#settings .tab')) t.addEventListener('click', () => showTab(t.dataset.tab));
+
 function openSettings() {
+  let tab = 'board';
+  try { tab = sessionStorage.getItem(TAB_KEY) || 'board'; } catch { /* default */ }
+  showTab(tab);
   renderTrash();
   const s = state.settings;
   $('startEditing').hidden = editing;

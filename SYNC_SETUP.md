@@ -26,13 +26,13 @@ If a token is lost or expires, just make a new one. If the iPad is ever lost, de
 
 In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari or Chrome), hold the circle at the top right, then tap **⚙ Settings** in the purple bar:
 
-1. Under **Share the board between devices**, set **This device** to **Editing computer**.
+1. On the **Sharing** tab, set **This device** to **Editing computer**.
 2. Paste the computer token.
 3. Press **Send board to tablet**. The first send makes the computer's board the shared one.
 
 ## 3. Link Robyn's iPad
 
-On the iPad, hold the circle at the top right, then tap **⚙ Settings** in the purple bar:
+On the iPad, hold the circle at the top right, then tap **⚙ Settings** in the purple bar and open the **Sharing** tab:
 
 1. Set **This device** to **Robyn's iPad**.
 2. Paste the iPad token. It fetches the shared board straight away. The first time, the iPad takes the shared board as it is.
@@ -46,7 +46,7 @@ On the iPad, hold the circle at the top right, then tap **⚙ Settings** in the 
 - **To pick up changes right away**, on either device: grown-up settings → **Check for changes now**.
 ## Automatic or manual
 
-Each device has two tick boxes in **⚙ Settings** (hold the circle, then tap ⚙ Settings), under **Share the board between devices**:
+Each device has two tick boxes on the **Sharing** tab of **⚙ Settings** (hold the circle, then tap ⚙ Settings):
 
 | Setting | Ticked | Unticked |
 |---|---|---|

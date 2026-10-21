@@ -74,9 +74,13 @@
         <h2>Grown-up settings</h2>
         <button class="pill" value="close">Close</button>
       </header>
+      <div class="tabs" role="tablist" aria-label="Settings">
+        <button type="button" class="tab" role="tab" data-tab="board">Board &amp; voice</button>
+        <button type="button" class="tab" role="tab" data-tab="share">Sharing</button>
+        <button type="button" class="tab" role="tab" data-tab="backup">Backup &amp; help</button>
+      </div>
       <div class="settings-body">
-        <div class="settings-col">
-
+        <div class="tab-panel two-col" role="tabpanel" data-panel="board">
       <section>
         <h3>Board</h3>
         <button type="button" class="wide-btn" id="startEditing">Edit buttons and pages</button>
@@ -97,7 +101,6 @@
           <div class="swatches" id="skinSwatches"></div>
         </div>
       </section>
-
       <section>
         <h3>Voice</h3>
         <label class="row">Speak each word when tapped <input type="checkbox" id="setSpeakTap"></label>
@@ -106,9 +109,8 @@
         <label class="row">Pitch <input type="range" id="setPitch" min="0.5" max="1.8" step="0.05"></label>
         <button type="button" class="wide-btn ghost" id="testVoice">Test voice</button>
       </section>
-
         </div>
-        <div class="settings-col">
+        <div class="tab-panel" role="tabpanel" data-panel="share" hidden>
       <section>
         <h3>Share the board between devices</h3>
         <label class="row">This device
@@ -129,13 +131,14 @@
           <p class="hint" id="syncStatus" role="status"></p>
         </div>
       </section>
-
+        </div>
+        <div class="tab-panel two-col" role="tabpanel" data-panel="backup" hidden>
+          <div>
       <section id="trashSection" hidden>
         <h3>Recently deleted</h3>
         <p class="hint">Buttons deleted on this device. Restore puts a button back where it was.</p>
         <div id="trashList"></div>
       </section>
-
       <section>
         <h3>Backup</h3>
         <p class="hint">Save everything (buttons, photos, settings) to a file, or load a saved file on another iPad.</p>
@@ -145,7 +148,8 @@
         </div>
         <button type="button" class="wide-btn danger" id="resetBtn">Reset to starting board</button>
       </section>
-
+          </div>
+          <div>
       <section class="about">
         <h3>About</h3>
         <p>Most pictures are <strong>ARASAAC</strong> pictograms. They are the property of the Government of Aragón and were created by Sergio Palao for
@@ -157,6 +161,7 @@
           A few extra symbols (I, you, stop, please, thank you, again) were drawn for TapTalk and are shared under the same licence.</p>
         <p class="hint" id="installHint"></p>
       </section>
+          </div>
         </div>
       </div>
     </form>

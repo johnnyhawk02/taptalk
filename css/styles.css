@@ -260,8 +260,17 @@ dialog.sheet[open] { display: flex; flex-direction: column; }
 .sheet-foot .wide-btn { width: auto; flex: none; min-width: 180px; margin: 0; }
 .sheet-foot .danger { margin-right: auto; }
 .sheet-head h2 { margin: 0; font-size: 22px; }
-.settings-body { padding: 0 20px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; align-items: start; }
-@media (max-width: 899px) { .settings-body { grid-template-columns: 1fr; } }
+/* Settings: tabs under the title; the pop-up keeps one size across tabs. */
+#settings { height: min(740px, calc(100dvh - 48px)); }
+@media (max-width: 899px) and (min-height: 900px) { #settings { height: min(940px, calc(100dvh - 48px)); } }
+.tabs { display: flex; gap: 4px; margin: 12px 20px 4px; padding: 4px; background: #efeee9; border-radius: 14px; flex: none; }
+.tab { flex: 1; border: none; background: transparent; border-radius: 10px; min-height: 44px; font-weight: 650; font-size: 16px; color: #48484c; }
+.tab[aria-selected="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+.settings-body { padding: 0 20px 16px; }
+.tab-panel { max-width: 640px; margin: 0 auto; }
+.tab-panel.two-col { max-width: none; display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; align-items: start; }
+.tab-panel[hidden] { display: none; }
+@media (max-width: 899px) { .tab-panel.two-col { grid-template-columns: 1fr; } }
 dialog.sheet:focus { outline: none; }
 .sheet-inner { overflow-y: auto; }
 .sheet h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6b70; margin: 16px 0 8px; }
