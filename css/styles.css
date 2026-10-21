@@ -235,7 +235,11 @@ dialog.sheet {
 dialog.sheet.tall { width: min(900px, calc(100vw - 32px)); height: calc(100dvh - 48px); }
 dialog::backdrop { background: rgba(20,20,24,0.45); }
 
-.sheet-inner { display: flex; flex-direction: column; max-height: inherit; height: 100%; }
+/* The dialog is a flex column with a max height; the inner panel takes the
+   space and scrolls. (A percentage height here collapsed dialogs to 0px tall
+   in Safari, leaving just the grey backdrop.) */
+dialog.sheet[open] { display: flex; flex-direction: column; }
+.sheet-inner { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .sheet-head, .sheet-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); flex: none; }
 .sheet-foot { border-bottom: none; border-top: 1px solid var(--line); }
 .sheet-head h2 { margin: 0; font-size: 22px; }
