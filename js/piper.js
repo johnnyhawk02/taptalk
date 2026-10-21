@@ -140,17 +140,41 @@ export function prepare(id) {
 // ---------- Speech, remembered so a button's word plays instantly next time ----------
 
 const memo = new Map();
+const making = new Map(); // words being made now, so each is only made once
 const MEMO_MAX = 400;
 
+// A word on its own comes out rushed and a little wobbly, so it is said as a
+// finished sentence, slower and steadier (chosen by ear for Robyn).
+function shape(text, lengthScale) {
+  text = text.trim();
+  if (/\s/.test(text)) return { text, lengthScale, noise: 1 };
+  return { text: /[.!?]$/.test(text) ? text : text + '.', lengthScale: lengthScale * 1.3, noise: 0.5 };
+}
+
 async function synth(id, text, lengthScale, urgent) {
-  const key = `${lengthScale}|${text}`;
+  const job = shape(text, lengthScale);
+  const key = `${job.lengthScale}|${job.noise}|${job.text}`;
   const hit = memo.get(key);
   if (hit) { memo.delete(key); memo.set(key, hit); return hit; }
-  await prepare(id);
-  const audio = await post({ type: 'say', text, lengthScale }, urgent);
-  memo.set(key, audio);
-  if (memo.size > MEMO_MAX) memo.delete(memo.keys().next().value);
-  return audio;
+  const already = making.get(key);
+  if (already) { if (urgent) promote(key); return already; }
+  const made = prepare(id).then(() => post({ type: 'say', ...job, key }, urgent)).then((audio) => {
+    memo.set(key, audio);
+    if (memo.size > MEMO_MAX) memo.delete(memo.keys().next().value);
+    return audio;
+  }).finally(() => making.delete(key));
+  making.set(key, made);
+  return made;
+}
+
+// A word being warmed up was tapped: make it next.
+function promote(key) {
+  const i = pending.findIndex((j) => j.msg.key === key);
+  if (i < 0 || pending[i].urgent) return;
+  const [job] = pending.splice(i, 1);
+  job.urgent = true;
+  const at = pending.findIndex((j) => !j.urgent);
+  if (at === -1) pending.push(job); else pending.splice(at, 0, job);
 }
 
 // The speed and pitch sliders were made for the iPad voices (1 = normal).
@@ -202,6 +226,6 @@ export function warm(id, texts, opts) {
   if (readyId !== id) return;
   const ls = scaleFor(opts);
   for (const text of new Set(texts)) {
-    if (text && !memo.has(`${ls}|${text}`)) synth(id, text, ls, false).catch(() => {});
+    if (text?.trim()) synth(id, text, ls, false).catch(() => {});
   }
 }

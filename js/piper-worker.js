@@ -3,7 +3,7 @@
 // fills when a voice is downloaded, so this works offline.
 //
 //   in:  { type: 'load', engine, voice }            -> { type: 'loaded' }
-//        { type: 'say', n, text, lengthScale }      -> { type: 'audio', n, pcm, sampleRate }
+//        { type: 'say', n, text, lengthScale, noise? } -> { type: 'audio', n, pcm, sampleRate }
 //   out on failure: { type: 'error', n?, message }
 
 const CACHE = 'taptalk-voices';
@@ -61,13 +61,13 @@ function phonemeIds(text) {
   return JSON.parse(printed).phoneme_ids;
 }
 
-async function say(text, lengthScale) {
+async function say(text, lengthScale, noise = 1) {
   const ids = phonemeIds(text);
   const { inference } = loaded.config;
   const feeds = {
     input: new ort.Tensor('int64', BigInt64Array.from(ids, BigInt), [1, ids.length]),
     input_lengths: new ort.Tensor('int64', BigInt64Array.from([BigInt(ids.length)]), [1]),
-    scales: new ort.Tensor('float32', Float32Array.from([inference.noise_scale, inference.length_scale * lengthScale, inference.noise_w]), [3]),
+    scales: new ort.Tensor('float32', Float32Array.from([inference.noise_scale * noise, inference.length_scale * lengthScale, inference.noise_w * noise]), [3]),
   };
   if (Object.keys(loaded.config.speaker_id_map || {}).length) {
     feeds.sid = new ort.Tensor('int64', BigInt64Array.from([0n]), [1]);
@@ -84,7 +84,7 @@ self.onmessage = async ({ data }) => {
       await loadVoice(data.voice);
       self.postMessage({ type: 'loaded', key: data.voice.key });
     } else if (data.type === 'say') {
-      const pcm = await say(data.text, data.lengthScale);
+      const pcm = await say(data.text, data.lengthScale, data.noise);
       self.postMessage({ type: 'audio', n: data.n, pcm, sampleRate: loaded.config.audio.sample_rate }, [pcm.buffer]);
     }
   } catch (err) {
