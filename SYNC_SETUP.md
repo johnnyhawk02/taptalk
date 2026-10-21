@@ -44,7 +44,16 @@ On the iPad, in TapTalk's grown-up settings:
 - **On the computer:** click **Edit** (or press **E**), make your changes, then press **Send to tablet** in the purple bar. Press **E** or **Esc** to stop editing. While editing, the computer shows a smaller view so whole pages fit. **Full-size view** shows it the size Robyn sees it.
 - **At school:** hold the circle → **Edit buttons and pages**, make changes, and tap **Done**. They're sent automatically.
 - **To pick up changes right away**, on either device: grown-up settings → **Check for changes now**.
-- **To choose when the iPad's board changes** (say, not during the school day): untick **Get changes automatically** on the iPad. It then only changes when you tap **Check for changes now**. School's edits are still sent when they tap **Done**.
+## Automatic or manual
+
+Each device has two tick boxes in grown-up settings, under **Share the board between devices**:
+
+| Setting | Ticked | Unticked |
+|---|---|---|
+| **Get changes automatically** | Picks up changes from the other device by itself | Only when you tap **Check for changes now** |
+| **Send changes automatically when editing is done** | Sends as soon as you finish editing (**Done**, or **E** on the computer) | Changes wait until you press **Send** (in the purple editing bar, or grown-up settings) |
+
+By default, Robyn's iPad gets and sends automatically, and the computer gets automatically but sends only when you press **Send to tablet**. Change either on either device. For example, untick **Get changes automatically** on the iPad so its board doesn't change during the school day.
 
 Good to know:
 - **The voice setting stays separate on each device.** Everything else is shared: buttons, pages, photos, buttons per row and skin colour.

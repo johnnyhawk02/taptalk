@@ -264,7 +264,9 @@ function render() {
   document.body.classList.toggle('editing', editing);
   $('editBanner').hidden = !editing;
   const syncMode = sync.config().mode;
-  $('sendFromBanner').hidden = syncMode !== 'send';
+  const manualSend = syncMode === 'send' || (syncMode === 'both' && !autoSend());
+  $('sendFromBanner').hidden = !manualSend;
+  if (!$('sendFromBanner').disabled) $('sendFromBanner').textContent = sendLabel();
   $('compactToggle').hidden = syncMode !== 'send';
   $('compactToggle').textContent = compactPref() ? 'Full-size view' : 'Smaller view';
   $('editToggle').hidden = syncMode !== 'send';
@@ -272,7 +274,7 @@ function render() {
   $('editToggleText').textContent = editing ? 'Done' : 'Edit';
   $('editHint').textContent = syncMode === 'receive'
     ? 'Editing — changes made here stay on this iPad only'
-    : syncMode === 'both' ? 'Editing — your changes are shared when you tap Done'
+    : syncMode === 'both' ? (autoSend() ? 'Editing — your changes are shared when you tap Done' : 'Editing — tap Send changes to share them')
     : syncMode === 'send' ? 'Editing — click a button to change it · press E when done'
     : 'Editing — tap a button to change it';
   $('pageTitle').textContent = page.name;
@@ -609,6 +611,13 @@ const syncStatus = (text) => { $('syncStatus').textContent = text; };
 const when = (iso) => (iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'never');
 const linked = () => { const c = sync.config(); return c.mode !== 'off' && c.token ? c : null; };
 
+// Whether this device sends its edits by itself when editing is done
+// (default: yes on the school iPad, no on the computer, which has a Send button).
+function autoSend(c = sync.config()) {
+  return c.autoSend ?? c.mode === 'both';
+}
+const sendLabel = () => (sync.config().mode === 'send' ? 'Send to tablet' : 'Send changes');
+
 // Called after every board edit: remember there's something to share.
 function markChanged() {
   const m = sync.config().mode;
@@ -626,6 +635,8 @@ function fillSyncFields() {
   $('syncCheck').hidden = c.mode === 'off';
   $('syncAutoRow').hidden = c.mode === 'off';
   $('syncAuto').checked = c.auto;
+  $('syncAutoSendRow').hidden = c.mode !== 'send' && c.mode !== 'both';
+  $('syncAutoSend').checked = autoSend(c);
   const unsent = c.unsent && c.mode !== 'receive' ? ' · changes not sent yet' : '';
   syncStatus(c.mode === 'off' ? '' : `Last sent: ${when(c.lastSent)} · Last updated: ${when(c.lastReceived)}${unsent}`);
 }
@@ -702,13 +713,13 @@ function applyPendingBoard(force = false) {
 // trying (e.g. after being offline) until they've gone.
 function shareIfUnsent() {
   const c = linked();
-  if (c?.mode === 'both' && c.unsent && !editing) syncBoard({ upload: true });
+  if (c && c.mode !== 'receive' && c.unsent && autoSend(c) && !editing) { syncBoard({ upload: true }); return true; }
+  return false;
 }
-// Regular check: share anything waiting, otherwise look for changes.
+// Regular check: share anything waiting (if sending automatically),
+// otherwise look for changes.
 function syncTick() {
-  const c = linked();
-  if (c?.mode === 'both' && c.unsent && !editing) shareIfUnsent();
-  else syncBoard();
+  if (!shareIfUnsent()) syncBoard();
 }
 window.addEventListener('online', syncTick);
 
@@ -722,9 +733,18 @@ $('sendFromBanner').addEventListener('click', async () => {
   btn.textContent = last.startsWith('Sent') ? 'Sent ✓' : 'Not sent';
   btn.title = last;
   btn.disabled = false;
-  setTimeout(() => { btn.textContent = 'Send to tablet'; }, 4000);
+  setTimeout(() => { btn.textContent = sendLabel(); }, 4000);
 });
 $('syncCheck').addEventListener('click', () => syncBoard({ manual: true }));
+// Manual sending: edits wait until someone presses Send.
+$('syncAutoSend').addEventListener('change', (e) => {
+  sync.setConfig({ autoSend: e.target.checked });
+  syncStatus(e.target.checked
+    ? 'Changes will be sent when editing is done.'
+    : 'Changes will wait until you press Send.');
+  render();
+  shareIfUnsent();
+});
 // Manual: the board only changes when a grown-up taps "Check for changes now".
 $('syncAuto').addEventListener('change', (e) => {
   sync.setConfig({ auto: e.target.checked });
