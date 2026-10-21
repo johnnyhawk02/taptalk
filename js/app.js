@@ -10,7 +10,7 @@ import * as piper from './piper.js';
 import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 7; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons
+const STATE_VERSION = 8; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -121,17 +121,20 @@ function upgradePages(pages, version) {
   }
   if (version < 4) addMissingPages(pages);
   const removed = version < 5 ? movePagesToSideColumn(pages) : [];
-  if (version < 6) markStripWords(pages);
+  if (version < 8) markStripWords(pages);
   return removed;
 }
 
-// v6: mark the starting core words (by word, on Home) for the core strip,
-// unless some button is already marked.
+// v6/v8: mark the starting core words (by word, on Home) for the core strip.
+// Only buttons nobody has edited are marked, so a word someone took out of the
+// strip stays out. They're stamped as just changed so the marks win when the
+// board is merged with another device (v6 didn't, and the marks got lost).
 function markStripWords(pages) {
-  const all = Object.values(pages).flatMap((p) => p.items);
-  if (all.some((it) => it.strip)) return;
   const words = DEFAULT_PAGES.home.items.filter(([, , , extra]) => extra?.strip).map(([label]) => label);
-  for (const it of pages[HOME]?.items || []) if (words.includes(it.label)) it.strip = true;
+  const at = Date.now();
+  for (const it of pages[HOME]?.items || []) {
+    if (words.includes(it.label) && !it.strip && !it.updatedAt) { it.strip = true; it.updatedAt = at; }
+  }
 }
 
 // v5: Food, Drinks, Play, Feelings, People and Places live in the left-hand
