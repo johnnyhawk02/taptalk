@@ -43,6 +43,37 @@ function decode(v) {
 const read = async (id) => decode(await tx('readonly', (s) => s.get(id)));
 const write = async (id, blob) => { const v = await encode(blob); await tx('readwrite', (s) => s.put(v, id)); };
 
+// A photo fills its button; a picture that is mostly see-through (a cut-out,
+// an AI drawing, a circle crop) is shown whole instead. Rounded corners are
+// only a few per cent see-through, so those photos still fill.
+const fillCache = new Map();
+const FILL_IF_CLEAR_BELOW = 0.1;
+
+export function fills(id) {
+  if (!fillCache.has(id)) fillCache.set(id, measureFill(id));
+  return fillCache.get(id);
+}
+
+async function measureFill(id) {
+  const blob = await read(id);
+  if (!blob) return false;
+  if (blob.type === 'image/jpeg') return true; // JPEGs have no see-through parts
+  try {
+    const bmp = await createImageBitmap(blob);
+    const n = 32;
+    const c = document.createElement('canvas');
+    c.width = c.height = n;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(bmp, 0, 0, n, n);
+    const px = g.getImageData(0, 0, n, n).data;
+    let clear = 0;
+    for (let i = 3; i < px.length; i += 4) if (px[i] < 200) clear++;
+    return clear / (n * n) < FILL_IF_CLEAR_BELOW;
+  } catch {
+    return false;
+  }
+}
+
 export async function url(id) {
   if (urls.has(id)) return urls.get(id);
   const blob = await read(id);

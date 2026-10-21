@@ -227,9 +227,12 @@ async function setSymbol(img, sym) {
   const [kind, name] = splitSym(sym);
   if (!kind) { img.removeAttribute('src'); return; }
   if (kind === 'u') {
-    img.src = (await photos.url(name)) || '';
+    const [src, fill] = await Promise.all([photos.url(name), photos.fills(name)]);
+    img.src = src || '';
+    img.closest('.tile')?.classList.toggle('fill', Boolean(src && fill));
     return;
   }
+  img.closest('.tile')?.classList.remove('fill');
   const url = rawSymbolUrl(sym);
   const tone = state.settings.skin;
   if (!tone || tone === DEFAULT_SKIN) { img.src = url; return; }
