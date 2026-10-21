@@ -275,11 +275,18 @@ function loadVoices() {
   fillVoiceSelect();
 }
 
+// Apple gives every quality of a voice the same name ("Stephanie"); the
+// quality is only in its voiceURI (com.apple.voice.premium.en-GB.Stephanie).
+function voiceQuality(v) {
+  const m = /premium|enhanced|natural/i.exec(v.voiceURI + ' ' + v.name);
+  return m ? m[0][0].toUpperCase() + m[0].slice(1).toLowerCase() : '';
+}
+
 function scoreVoice(v) {
   let s = 0;
   if (v.lang === 'en-GB' || v.lang === 'en_GB') s += 4;
   if (v.localService) s += 2;
-  if (/enhanced|premium|natural/i.test(v.name)) s += 1;
+  s += { Premium: 3, Natural: 3, Enhanced: 2 }[voiceQuality(v)] || 0;
   return s;
 }
 
@@ -712,7 +719,7 @@ function openSettings() {
 function fillVoiceSelect() {
   const sel = $('setVoice');
   const cur = currentVoice();
-  sel.replaceChildren(...voices.map((v) => new Option(`${v.name} (${v.lang})`, v.voiceURI, false, v === cur)));
+  sel.replaceChildren(...voices.map((v) => new Option(`${v.name}${voiceQuality(v) && !/premium|enhanced|natural/i.test(v.name) ? ' – ' + voiceQuality(v) : ''} (${v.lang.replace('_', '-')})`, v.voiceURI, false, v === cur)));
   if (!voices.length) sel.append(new Option('Default voice', ''));
 }
 
