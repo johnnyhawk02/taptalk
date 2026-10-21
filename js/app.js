@@ -482,6 +482,13 @@ function tileFor(item) {
   label.className = 'label';
   label.textContent = item.label;
   b.append(img, label);
+  if (item.type === 'folder') {
+    const arrow = document.createElement('span');
+    arrow.className = 'page-badge';
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12h13M12.5 6l6 6-6 6"/></svg>';
+    b.append(arrow);
+  }
   if (item.video) {
     const play = document.createElement('span');
     play.className = 'play-badge';
@@ -605,6 +612,7 @@ function renderSidebar() {
     if (!page) continue;
     const b = navButton(page.name, navIcon(id), 'nav-page');
     if (id === pageId) b.setAttribute('aria-current', 'page');
+    b.insertAdjacentHTML('beforeend', '<span class="page-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M12.5 6l6 6-6 6"/></svg></span>');
     b.addEventListener('click', () => goTo(id, { fromNav: true }));
     if (editing) {
       const x = document.createElement('span');

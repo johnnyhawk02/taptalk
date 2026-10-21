@@ -13,7 +13,7 @@
   --social-bg: #fde0ec; --social: #d6508e;
   --neg-bg: #fbd9d9; --neg: #d33131;
   --q-bg: #ebdffa; --q: #8455cf;
-  --folder-bg: #ebe9e4; --folder: #8c8a84;
+  --folder-bg: #fbfaf7; --folder: #8c8a84;
 
   --gap: 10px;
   --radius: 18px;
@@ -264,16 +264,13 @@ body:not(.editing) .page-head { display: none; }
 .t-q      { --tile-bg: var(--q-bg);      --tile-line: var(--q); }
 .t-folder { --tile-bg: var(--folder-bg); --tile-line: var(--folder); }
 
-/* Folder tiles get a tab so they look different from word buttons */
-.tile.folder { border-top-left-radius: min(6px, var(--btn-radius, 6px)); }
-.tile.folder::before {
-  content: "";
-  position: absolute;
-  top: calc(-1 * var(--btn-line, 4px)); left: calc(-1 * var(--btn-line, 4px));
-  width: 42%; height: 16px;
-  background: var(--folder);
-  border-radius: 0 0 12px 0;
+/* Page buttons (open another page) carry an arrow badge, top right, like TD Snap */
+.page-badge {
+  position: absolute; top: 6px; right: 6px; z-index: 2;
+  width: clamp(24px, calc(var(--row-h, 120px) * 0.2), 34px); aspect-ratio: 1; border-radius: 50%;
+  background: #3a3a3c; display: grid; place-items: center; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
+.page-badge svg { width: 62%; height: 62%; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .tile.back { --tile-bg: var(--surface); --tile-line: var(--line); }
 .tile.back svg { flex: 1; min-height: 0; width: 60%; fill: none; stroke: var(--ink); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -437,7 +434,6 @@ a.wide-btn { text-decoration: none; }
 .compact .grid { max-width: calc(var(--cols, 6) * 150px); width: 100%; margin: 0 auto; }
 .compact .tile { border-width: calc(var(--btn-line, 4px) * 0.75); border-radius: calc(var(--btn-radius, var(--radius)) * 0.7); padding: 4px 4px 3px; }
 .compact .tile .label { font-size: clamp(12px, calc(var(--row-h, 90px) * 0.15), 16px); }
-.compact .tile.folder::before { height: 10px; }
 
 /* Phones and small windows: shrink the chrome */
 @media (max-width: 700px) {
@@ -561,3 +557,7 @@ dialog.sheet.video-sheet { width: calc(100vw - 24px); height: calc(100dvh - 24px
 .video-bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .video-yt { background: #2a2a2c; color: #ddd; border-color: #444; text-decoration: none; font-size: 15px; }
 .video-close { min-height: 72px; min-width: 220px; border: 0; border-radius: 18px; background: #fff; color: #1d1d1f; font-size: 26px; font-weight: 800; box-shadow: 0 2px 2px rgba(0,0,0,0.3); }
+.editing .tile.folder.hidden-item::after { right: auto; left: 8px; }
+.sidebar .page-badge { top: 5px; right: 5px; width: 22px; }
+.sidebar.two-col .page-badge { width: 18px; top: 3px; right: 3px; }
+.sidebar.editing-col .page-badge, .editing .sidebar .page-badge { display: none; } /* the × sits there while editing */
