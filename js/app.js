@@ -8,7 +8,7 @@ import { openSheet } from './sheet.js';
 import { merge, fingerprint } from './merge.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 5; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column
+const STATE_VERSION = 6; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS = {
   cols: 5,
   rows: 5,          // rows on screen; pages with more buttons scroll
   sidebar: true,    // left-hand column of page buttons
+  coreStrip: true,  // core words strip on every page
   nav: [...DEFAULT_NAV],
   labels: true,
   autoHome: true,
@@ -52,7 +53,7 @@ function buildDefaultPages() {
       items: page.items.map(([label, sym, type, extra = {}], i, all) => {
         const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const dup = all.slice(0, i).some(([l]) => l.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug);
-        return { id: `d-${pageId}-${slug}${dup ? '-' + i : ''}`, label, sym, type, say: extra.say || '', link: extra.link || '', hidden: false };
+        return { id: `d-${pageId}-${slug}${dup ? '-' + i : ''}`, label, sym, type, say: extra.say || '', link: extra.link || '', hidden: false, ...(extra.strip && { strip: true }) };
       }),
     };
   }
@@ -114,7 +115,18 @@ function upgradePages(pages, version) {
     }
   }
   if (version < 4) addMissingPages(pages);
-  return version < 5 ? movePagesToSideColumn(pages) : [];
+  const removed = version < 5 ? movePagesToSideColumn(pages) : [];
+  if (version < 6) markStripWords(pages);
+  return removed;
+}
+
+// v6: mark the starting core words (by word, on Home) for the core strip,
+// unless some button is already marked.
+function markStripWords(pages) {
+  const all = Object.values(pages).flatMap((p) => p.items);
+  if (all.some((it) => it.strip)) return;
+  const words = DEFAULT_PAGES.home.items.filter(([, , , extra]) => extra?.strip).map(([label]) => label);
+  for (const it of pages[HOME]?.items || []) if (words.includes(it.label)) it.strip = true;
 }
 
 // v5: Food, Drinks, Play, Feelings, People and Places live in the left-hand
@@ -317,6 +329,7 @@ function render() {
   grid.style.setProperty('--cols', state.settings.cols);
 
   renderSidebar();
+  renderCoreBar();
   const frag = document.createDocumentFragment();
   if (pageId !== HOME && !state.settings.sidebar) frag.append(backTile());
   // Hidden buttons keep their space so nothing else moves (motor planning).
@@ -547,12 +560,15 @@ grid.addEventListener('click', (e) => {
 
   const item = findItem(tile.dataset.id);
   if (!item) return;
-
   if (editing) { openEditor(item); return; }
+  chooseItem(item, tile);
+});
 
-  const now = Date.now();
-  if (state.settings.debounce && now - lastTap < state.settings.debounce) return;
-  lastTap = now;
+// A word or page button was tapped (on the grid, or in the core strip).
+function chooseItem(item, tile, { fromStrip = false } = {}) {
+  const t = Date.now();
+  if (state.settings.debounce && t - lastTap < state.settings.debounce) return;
+  lastTap = t;
   flash(tile);
 
   if (item.type === 'folder') {
@@ -563,8 +579,41 @@ grid.addEventListener('click', (e) => {
   sentence.push({ label: item.label, say: item.say || item.label, sym: item.sym, type: item.type });
   renderStrip();
   if (state.settings.speakOnTap) speak(item.say || item.label);
-  // Place pages (School, Park…) stay open: you often want several words there.
-  if (state.settings.autoHome && pageId !== HOME && !state.pages[pageId].stay) goTo(HOME);
+  // Place pages (School, Park…) stay open: you often want several words
+  // there; core strip words never jump away from the page either.
+  if (!fromStrip && state.settings.autoHome && pageId !== HOME && !state.pages[pageId].stay) goTo(HOME);
+}
+
+// ---------- Core words strip ----------
+// The buttons marked "Show in core strip" (Home's first), on every page.
+
+const coreBar = $('coreBar');
+
+function stripItems() {
+  const ids = [HOME, ...Object.keys(state.pages).filter((id) => id !== HOME)];
+  return ids.flatMap((id) => (state.pages[id]?.items || []).filter((it) => it.strip && !it.hidden).map((it) => ({ it, page: id }))).slice(0, 10);
+}
+
+function renderCoreBar() {
+  // Not on Home: the core words are already on screen there.
+  const items = state.settings.coreStrip && pageId !== HOME ? stripItems() : [];
+  coreBar.hidden = !items.length;
+  coreBar.style.setProperty('--n', items.length || 1);
+  coreBar.replaceChildren(...items.map(({ it, page }) => {
+    const b = tileFor(it);
+    b.classList.add('core-tile');
+    b.dataset.page = page;
+    return b;
+  }));
+}
+
+coreBar.addEventListener('click', (e) => {
+  const tile = e.target.closest('.tile');
+  if (!tile) return;
+  const item = state.pages[tile.dataset.page]?.items.find((it) => it.id === tile.dataset.id);
+  if (!item) return;
+  if (editing) { openEditor(item, false, tile.dataset.page); return; }
+  chooseItem(item, tile, { fromStrip: true });
 });
 
 function findItem(id) {
@@ -644,6 +693,7 @@ function openSettings() {
   $('setCols').value = String(s.cols);
   $('setRows').value = String(s.rows || 5);
   $('setSidebar').checked = s.sidebar;
+  $('setCoreStrip').checked = s.coreStrip;
   $('setLabels').checked = s.labels;
   $('setAutoHome').checked = s.autoHome;
   $('setDebounce').value = String(s.debounce);
@@ -690,6 +740,7 @@ function bindSetting(id, key, read) {
 bindSetting('setCols', 'cols', (el) => Number(el.value));
 bindSetting('setRows', 'rows', (el) => Number(el.value));
 bindSetting('setSidebar', 'sidebar', (el) => el.checked);
+bindSetting('setCoreStrip', 'coreStrip', (el) => el.checked);
 bindSetting('setLabels', 'labels', (el) => el.checked);
 bindSetting('setAutoHome', 'autoHome', (el) => el.checked);
 bindSetting('setDebounce', 'debounce', (el) => Number(el.value));
@@ -952,7 +1003,10 @@ $('syncAuto').addEventListener('change', (e) => {
 let draft = null;     // copy of item being edited
 let draftIsNew = false;
 
-function openEditor(item, isNew = !item) {
+let editPage = HOME; // the page the button being edited lives on
+
+function openEditor(item, isNew = !item, onPage = pageId) {
+  editPage = state.pages[onPage] ? onPage : pageId;
   draftIsNew = isNew;
   draft = item ? { ...item } : { id: uid(), label: '', say: '', sym: '', type: 'noun', link: '', hidden: false };
   $('editorTitle').textContent = draftIsNew ? 'Add button' : 'Edit button';
@@ -960,6 +1014,7 @@ function openEditor(item, isNew = !item) {
   $('edLabel').value = draft.label;
   $('edSay').value = draft.say;
   $('edHidden').checked = draft.hidden;
+  $('edStrip').checked = Boolean(draft.strip);
   $('deleteBtn').hidden = draftIsNew;
   $('moveRow').hidden = draftIsNew;
   fillLinkSelect();
@@ -1192,12 +1247,12 @@ $('moveBack').addEventListener('click', () => moveItem(-1));
 $('moveFwd').addEventListener('click', () => moveItem(1));
 
 function moveItem(dir) {
-  const items = state.pages[pageId].items;
+  const items = state.pages[editPage].items;
   const i = items.findIndex((it) => it.id === draft.id);
   const j = i + dir;
   if (i < 0 || j < 0 || j >= items.length) return;
   [items[i], items[j]] = [items[j], items[i]];
-  state.pages[pageId].orderAt = now();
+  state.pages[editPage].orderAt = now();
   markChanged();
   save();
   render();
@@ -1253,11 +1308,11 @@ function restoreButton(entry) {
 }
 
 $('deleteBtn').addEventListener('click', () => {
-  const page = state.pages[pageId];
+  const page = state.pages[editPage];
   const index = page.items.findIndex((it) => it.id === draft.id);
   if (index < 0) return;
   const [item] = page.items.splice(index, 1);
-  const entry = { item, pageId, index, at: now() };
+  const entry = { item, pageId: editPage, index, at: now() };
   state.deleted[item.id] = entry.at;
   writeTrash([entry, ...readTrash().filter((t) => t.item.id !== item.id)]);
   markChanged();
@@ -1285,11 +1340,12 @@ $('editorForm').addEventListener('submit', (e) => {
     draft.link = '';
   }
 
+  draft.strip = $('edStrip').checked || undefined;
   draft.updatedAt = now();
-  const items = state.pages[pageId].items;
+  const items = state.pages[editPage].items;
   const i = items.findIndex((it) => it.id === draft.id);
   const before = i >= 0 ? { ...items[i] } : null;
-  const where = pageId;
+  const where = editPage;
   const saved = draft;
   if (i >= 0) items[i] = draft; else items.push(draft);
   markChanged();

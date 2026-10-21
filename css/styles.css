@@ -185,6 +185,15 @@ button { cursor: pointer; }
 .nav-list .nav-btn { flex: none; height: 72px; }
 .compact .sidebar { width: 150px; }
 
+/* Core words strip: one row of the buttons marked for it, on every page. */
+.board-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.core-bar { flex: none; height: clamp(70px, 11dvh, 104px); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--gap); }
+.core-bar[hidden] { display: none; }
+.core-bar .tile { --row-h: clamp(70px, 11dvh, 104px); padding: 4px 4px 3px; border-width: 3px; }
+.core-bar .tile .label { font-size: clamp(12px, min(1.8dvh, calc((100vw - 260px) / var(--n, 8) * 0.13)), 18px); }
+.compact .core-bar { height: 64px; }
+.compact .core-bar .tile { --row-h: 64px; }
+
 /* ---------- Grid ---------- */
 .grid {
   flex: 1;

@@ -61,7 +61,10 @@
 
     <div class="board">
       <nav class="sidebar" id="sidebar" aria-label="Pages"></nav>
-      <main class="grid" id="grid" aria-live="off"></main>
+      <div class="board-main">
+        <div class="core-bar" id="coreBar" aria-label="Core words" hidden></div>
+        <main class="grid" id="grid" aria-live="off"></main>
+      </div>
     </div>
 
     <div class="undo-bar" id="undoBar" hidden role="status">
@@ -98,6 +101,7 @@
           </select>
         </label>
         <label class="row">Page column on the left <input type="checkbox" id="setSidebar"></label>
+        <label class="row">Core words strip on every page <input type="checkbox" id="setCoreStrip"></label>
         <label class="row">Show words under pictures <input type="checkbox" id="setLabels"></label>
         <label class="row">Go back to Home after choosing from a page <input type="checkbox" id="setAutoHome"></label>
         <label class="row">Ignore repeated taps for
@@ -211,6 +215,7 @@
 
           <label class="row" id="folderRow">Opens a page <select id="edLink"></select></label>
           <label class="row">Hide from Robyn <input type="checkbox" id="edHidden"></label>
+          <label class="row">Show in core strip <input type="checkbox" id="edStrip"></label>
 
           <div class="btn-row" id="moveRow">
             <button type="button" class="wide-btn ghost" id="moveBack">◀ Move earlier</button>

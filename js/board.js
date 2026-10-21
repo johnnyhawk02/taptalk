@@ -15,6 +15,7 @@
 // jump back to Home after a word is chosen (used for the place pages).
 
 const F = (label, sym, link) => [label, sym, 'folder', { link }];
+const S = { strip: true }; // shown in the core words strip on every page
 
 // Pages in the left-hand column (always visible), top to bottom.
 export const DEFAULT_NAV = ['food', 'drinks', 'play', 'feelings', 'people', 'places'];
@@ -23,10 +24,10 @@ export const DEFAULT_PAGES = {
   home: {
     name: 'Home',
     items: [
-      ['I', 'a:2617', 'pron'], ['want', 'a:5441', 'verb'], ['more', 'a:5508', 'desc'], ['help', 'a:4570', 'verb'], ['stop', 'a:8289', 'neg'],
-      ['you', 'a:2608', 'pron'], ['go', 'a:2432', 'verb'], ['like', 'a:2418', 'verb'], ["don't like", 'a:22005', 'neg', { say: "don't like" }], ['all done', 'a:28429', 'social'],
+      ['I', 'a:2617', 'pron', S], ['want', 'a:5441', 'verb', S], ['more', 'a:5508', 'desc', S], ['help', 'a:4570', 'verb', S], ['stop', 'a:8289', 'neg', S],
+      ['you', 'a:2608', 'pron'], ['go', 'a:2432', 'verb'], ['like', 'a:2418', 'verb'], ["don't like", 'a:22005', 'neg', { say: "don't like" }], ['all done', 'a:28429', 'social', S],
       ['eat', 'a:2349', 'verb'], ['drink', 'a:2276', 'verb'], ['play', 'a:2439', 'verb'], ['toilet', 'a:2430', 'noun'], ['hurt', 'a:5484', 'desc'],
-      ['yes', 'a:5584', 'social'], ['no', 'a:5526', 'neg'], ['wait', 'a:8109', 'verb'], F('Chat', 'a:3345', 'chat'), F('Actions', 'a:7297', 'actions'),
+      ['yes', 'a:5584', 'social', S], ['no', 'a:5526', 'neg', S], ['wait', 'a:8109', 'verb'], F('Chat', 'a:3345', 'chat'), F('Actions', 'a:7297', 'actions'),
       F('Describe', 'a:4658', 'describe'), F('Body', 'a:2728', 'body'), F('Animals', 'a:6901', 'animals'), F('Colours', 'a:5968', 'colours'),
     ],
   },
