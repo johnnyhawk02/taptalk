@@ -558,7 +558,3 @@ dialog.sheet.video-sheet { width: calc(100vw - 24px); height: calc(100dvh - 24px
 .video-yt { background: #2a2a2c; color: #ddd; border-color: #444; text-decoration: none; font-size: 15px; }
 .video-close { min-height: 72px; min-width: 220px; border: 0; border-radius: 18px; background: #fff; color: #1d1d1f; font-size: 26px; font-weight: 800; box-shadow: 0 2px 2px rgba(0,0,0,0.3); }
 .editing .tile.folder.hidden-item::after { right: auto; left: 8px; }
-.sidebar .page-badge { top: 4px; right: 4px; width: 15px; box-shadow: none; opacity: 0.75; }
-.sidebar .page-badge svg { stroke-width: 3.5; }
-.sidebar.two-col .page-badge { width: 13px; top: 3px; right: 3px; }
-.sidebar.editing-col .page-badge, .editing .sidebar .page-badge { display: none; } /* the × sits there while editing */

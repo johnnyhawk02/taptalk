@@ -612,7 +612,6 @@ function renderSidebar() {
     if (!page) continue;
     const b = navButton(page.name, navIcon(id), 'nav-page');
     if (id === pageId) b.setAttribute('aria-current', 'page');
-    b.insertAdjacentHTML('beforeend', '<span class="page-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M12.5 6l6 6-6 6"/></svg></span>');
     b.addEventListener('click', () => goTo(id, { fromNav: true }));
     if (editing) {
       const x = document.createElement('span');
