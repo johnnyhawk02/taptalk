@@ -1355,80 +1355,64 @@ $('edLabel').addEventListener('input', renderPreview);
 $('pickSymbol').addEventListener('click', () => openPicker($('edLabel').value));
 
 // ---------- Make a picture with AI ----------
-// Four choices at once, numbered 1–4; the chosen one goes to the picture
-// editor, keeping its see-through background.
+// One picture at a time: Redo makes another (change the words first if you
+// like), Use this sends it to the picture editor with its see-through
+// background kept.
 
-let makerRun = null;   // AbortController for the pictures being made
-let makerSlots = [];
+let makerRun = null;   // AbortController for the picture being made
+let made = null;       // { blob, url } of the picture on show
 
 function openMaker() {
   if (!ai.key()) { photoStatus('To make pictures, add an OpenAI key in ⚙ Settings → Pictures.'); return; }
   $('makerSubject').value = $('edLabel').value.trim();
-  makerSlots = [];
-  drawMakerSlots();
-  $('makerGo').textContent = 'Make 4';
+  showMade(null);
   $('makerStatus').textContent = '';
   openSheet($('maker'));
-  if ($('makerSubject').value) makeFour(); else $('makerSubject').focus();
+  if ($('makerSubject').value) makeOne(); else $('makerSubject').focus();
 }
 
-function drawMakerSlots() {
-  $('makerGrid').replaceChildren(...[0, 1, 2, 3].map((i) => {
-    const slot = makerSlots[i];
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = `maker-slot t-${draft.type === 'folder' ? 'noun' : draft.type}` + (!slot ? ' empty' : ` ${slot.state}`);
-    b.innerHTML = `<span class="num">${i + 1}</span>`;
-    if (slot?.state === 'ready') {
-      const img = document.createElement('img');
-      img.src = slot.url;
-      img.alt = `Choice ${i + 1}`;
-      b.append(img);
-    } else if (slot?.state === 'failed') {
-      b.append(document.createTextNode("Couldn't make this one"));
-    }
-    b.addEventListener('click', () => pickMade(i));
-    return b;
-  }));
+function showMade(state, text = '') {
+  const slot = $('makerSlot');
+  slot.className = `maker-slot t-${draft.type === 'folder' ? 'noun' : draft.type}` + (state === 'loading' ? ' loading' : '');
+  slot.replaceChildren();
+  if (state === 'ready') {
+    const img = document.createElement('img');
+    img.src = made.url;
+    img.alt = 'The picture made';
+    slot.append(img);
+  } else if (text) slot.textContent = text;
+  $('makerUse').disabled = state !== 'ready';
+  $('makerRedo').disabled = state === 'loading';
 }
 
-async function makeFour() {
+async function makeOne() {
   const text = $('makerSubject').value.trim();
   if (!text) { $('makerStatus').textContent = 'Type what the picture should show.'; $('makerSubject').focus(); return; }
   makerRun?.abort();
   const run = makerRun = new AbortController();
-  for (const slot of makerSlots) if (slot?.url) URL.revokeObjectURL(slot.url);
-  const prompt = `${state.settings.aiPrompt || ai.DEFAULT_PROMPT}\n${ai.subjectFor(text, draft.type)}`;
+  if (made) URL.revokeObjectURL(made.url);
+  made = null;
   const quality = state.settings.aiQuality || 'low';
-  makerSlots = [0, 1, 2, 3].map(() => ({ state: 'loading' }));
-  drawMakerSlots();
-  $('makerStatus').textContent = `Making 4 pictures (about ${4 * ai.PENCE[quality]}p). This takes about half a minute…`;
-  const errors = [];
-  await Promise.all(makerSlots.map(async (slot) => {
-    try {
-      slot.blob = await ai.make(prompt, { quality, signal: run.signal });
-      slot.url = URL.createObjectURL(slot.blob);
-      slot.state = 'ready';
-    } catch (err) {
-      if (run.signal.aborted) return;
-      slot.state = 'failed';
-      errors.push(err.message);
-    }
-    if (run === makerRun) drawMakerSlots();
-  }));
-  if (run !== makerRun) return;
-  const made = makerSlots.filter((x) => x.state === 'ready').length;
-  $('makerGo').textContent = 'Make 4 more';
-  $('makerStatus').textContent = made
-    ? `Tap the best one (or press 1–4). Not right? Change the words and make 4 more.${errors.length ? ` (${errors.length} didn't work: ${errors[0]})` : ''}`
-    : errors[0] || 'No pictures came back. Try again.';
+  showMade('loading');
+  $('makerStatus').textContent = `Making a picture (about ${ai.PENCE[quality]}p)…`;
+  try {
+    const blob = await ai.make(`${state.settings.aiPrompt || ai.DEFAULT_PROMPT}\n${ai.subjectFor(text, draft.type)}`, { quality, signal: run.signal });
+    if (run !== makerRun) return;
+    made = { blob, url: URL.createObjectURL(blob) };
+    showMade('ready');
+    $('makerStatus').textContent = 'Happy with it? Not quite right? Change the words if you like, then Redo.';
+  } catch (err) {
+    if (run.signal.aborted) return;
+    showMade('failed', "Couldn't make this one");
+    $('makerStatus').textContent = err.message;
+  }
 }
 
-function pickMade(i) {
-  const slot = makerSlots[i];
-  if (slot?.state !== 'ready') return;
+function useMade() {
+  if (!made) return;
+  const { blob } = made;
   closeMaker();
-  usePhoto(slot.blob, { fit: true, shape: 'square', bg: 'none' });
+  usePhoto(blob, { fit: true, shape: 'square', bg: 'none' });
 }
 
 function closeMaker() {
@@ -1438,15 +1422,11 @@ function closeMaker() {
 }
 
 $('makePicture').addEventListener('click', openMaker);
-$('makerGo').addEventListener('click', makeFour);
+$('makerRedo').addEventListener('click', makeOne);
+$('makerUse').addEventListener('click', useMade);
 $('makerClose').addEventListener('click', closeMaker);
 $('maker').addEventListener('cancel', () => { makerRun?.abort(); makerRun = null; });
-$('makerSubject').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); makeFour(); } });
-$('maker').addEventListener('keydown', (e) => {
-  if (e.target === $('makerSubject') || !/^[1-4]$/.test(e.key)) return;
-  e.preventDefault();
-  pickMade(Number(e.key) - 1);
-});
+$('makerSubject').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); makeOne(); } });
 
 $('aiKey').addEventListener('change', (e) => ai.setKey(e.target.value));
 $('aiQuality').addEventListener('change', (e) => { state.settings.aiQuality = e.target.value; touchSettings(); markChanged(); save(); });

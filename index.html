@@ -150,7 +150,7 @@
         <div class="tab-panel" role="tabpanel" data-panel="ai" hidden>
       <section>
         <h3>Make pictures with AI</h3>
-        <p class="hint">In the button editor, <strong>✨ Make picture</strong> draws four choices to pick from, using OpenAI.
+        <p class="hint">In the button editor, <strong>✨ Make picture</strong> draws a picture of the button's word using OpenAI; redo it until it's right.
           Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a> (it needs some credit).</p>
         <label class="field">OpenAI key (kept on this device only)<input type="password" id="aiKey" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="sk-…"></label>
         <label class="row">Quality
@@ -254,7 +254,7 @@
     </form>
   </dialog>
 
-  <!-- Make a picture with AI: four choices -->
+  <!-- Make a picture with AI: one at a time, redo until it's right -->
   <dialog id="maker" class="sheet">
     <div class="sheet-inner">
       <header class="sheet-head">
@@ -262,13 +262,14 @@
         <button type="button" class="pill" id="makerClose">Close</button>
       </header>
       <div class="maker-body">
-        <div class="maker-bar">
-          <input type="text" id="makerSubject" autocomplete="off" autocapitalize="none" aria-label="What the picture shows" placeholder="What should it show? e.g. pink scooter">
-          <button type="button" class="wide-btn primary" id="makerGo">Make 4</button>
-        </div>
-        <div class="maker-grid" id="makerGrid"></div>
+        <input type="text" id="makerSubject" autocomplete="off" autocapitalize="none" aria-label="What the picture shows" placeholder="What should it show? e.g. pink scooter">
+        <div class="maker-slot" id="makerSlot"></div>
         <p class="hint" id="makerStatus" role="status"></p>
       </div>
+      <footer class="sheet-foot">
+        <button type="button" class="wide-btn ghost" id="makerRedo">↻ Redo</button>
+        <button type="button" class="wide-btn primary" id="makerUse" disabled>Use this</button>
+      </footer>
     </div>
   </dialog>
 

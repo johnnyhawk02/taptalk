@@ -445,18 +445,13 @@ a.wide-btn { text-decoration: none; }
 /* Settings → Pictures */
 .field textarea { border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; background: #fff; font: inherit; font-size: 16px; font-weight: 400; color: var(--ink); resize: vertical; line-height: 1.35; }
 
-/* Make a picture: four choices */
-#maker { width: min(760px, calc(100vw - 32px)); }
-.maker-body { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: auto; }
-.maker-bar { display: flex; gap: 10px; }
-.maker-bar input { flex: 1; min-width: 0; border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; font-size: 18px; min-height: 48px; }
-.maker-bar .wide-btn { width: auto; margin: 0; min-height: 48px; }
-.maker-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-@media (max-width: 700px) { .maker-grid { grid-template-columns: repeat(2, minmax(0, 220px)); justify-content: center; } }
-.maker-slot { position: relative; aspect-ratio: 1; padding: 10px; border-radius: var(--radius); border: 4px solid var(--tile-line); background: var(--tile-bg); display: grid; place-items: center; color: var(--muted, #6b6b70); font-size: 14px; text-align: center; }
+/* Make a picture: one at a time */
+#maker { width: min(560px, calc(100vw - 32px)); }
+.maker-body { padding: 14px 20px 6px; display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 0; overflow: auto; }
+#makerSubject { align-self: stretch; border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; font-size: 18px; min-height: 48px; }
+.maker-slot { width: min(320px, 100%, 42dvh); aspect-ratio: 1; padding: 14px; border-radius: var(--radius); border: 4px solid var(--tile-line); background: var(--tile-bg); display: grid; place-items: center; color: #6b6b70; font-size: 15px; text-align: center; flex: none; }
 .maker-slot img { width: 100%; height: 100%; object-fit: contain; }
-.maker-slot .num { position: absolute; top: 6px; left: 6px; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 16px; }
-.maker-slot.loading::after { content: ""; width: 34px; height: 34px; border-radius: 50%; border: 4px solid rgba(0, 0, 0, 0.12); border-top-color: var(--ink); animation: spin 0.9s linear infinite; }
-.maker-slot.empty { opacity: 0.45; }
-.maker-slot:not(.ready) { cursor: default; }
+.maker-slot.loading::after { content: ""; width: 44px; height: 44px; border-radius: 50%; border: 5px solid rgba(0, 0, 0, 0.12); border-top-color: var(--ink); animation: spin 0.9s linear infinite; }
+#maker .maker-body .hint { text-align: center; min-height: 1.4em; margin: 0; }
+#maker .wide-btn[disabled] { opacity: 0.45; }
 @keyframes spin { to { transform: rotate(360deg); } }
