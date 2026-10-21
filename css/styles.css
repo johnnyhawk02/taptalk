@@ -455,3 +455,20 @@ a.wide-btn { text-decoration: none; }
 #maker .maker-body .hint { text-align: center; min-height: 1.4em; margin: 0; }
 #maker .wide-btn[disabled] { opacity: 0.45; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Copy / cut a button, then paste it on another page */
+#editor .sheet-foot .danger { margin-right: 0; }
+#editor #clipCut { margin-right: auto; }
+.clip-bar {
+  position: fixed; left: 50%; bottom: calc(var(--safe-b) + 20px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 10px; border-radius: 999px;
+  background: var(--verb); color: #fff; font-weight: 650; font-size: 17px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); z-index: 10;
+  max-width: calc(100vw - 32px);
+}
+.clip-bar[hidden] { display: none; }
+.clip-bar img { width: 44px; height: 44px; object-fit: contain; background: #fff; border-radius: 10px; padding: 3px; flex: none; }
+.clip-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clip-bar .pill { background: #fff; color: #1d1d1f; border: none; flex: none; }
+.clip-bar .clip-x { width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.22); color: #fff; font-size: 24px; line-height: 1; flex: none; }
+body.has-clip .undo-bar { bottom: calc(var(--safe-b) + 92px); }
+.editing .tile.cut-pending { opacity: 0.35; border-style: dashed; }

@@ -67,6 +67,14 @@
       </div>
     </div>
 
+    <!-- A copied or cut button waiting to be pasted (while editing) -->
+    <div class="clip-bar" id="clipBar" hidden>
+      <img id="clipImg" alt="">
+      <span id="clipText"></span>
+      <button class="pill" id="clipPaste">Paste here</button>
+      <button class="clip-x" id="clipClear" aria-label="Forget the copied button">×</button>
+    </div>
+
     <div class="undo-bar" id="undoBar" hidden role="status">
       <span id="undoText"></span>
       <button class="pill" id="undoBtn">Undo</button>
@@ -249,6 +257,8 @@
 
       <footer class="sheet-foot">
         <button type="button" class="wide-btn danger" id="deleteBtn">Delete button</button>
+        <button class="pill" value="copy" id="clipCopy" title="Copy this button, then paste it on another page">Copy</button>
+        <button class="pill" value="cut" id="clipCut" title="Move this button to another page">Cut</button>
         <button class="wide-btn primary" value="save">Save</button>
       </footer>
     </form>

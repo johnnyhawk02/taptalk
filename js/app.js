@@ -367,6 +367,9 @@ function render() {
   // Hidden buttons keep their space so nothing else moves (motor planning).
   for (const item of page.items) frag.append(item.hidden && !editing ? gapTile() : tileFor(item));
   if (editing) frag.append(addTile());
+  const clip = editing && readClip();
+  showClipBar(clip);
+  if (clip?.cut) frag.querySelector(`.tile[data-id="${clip.item.id}"]`)?.classList.add('cut-pending');
 
   grid.replaceChildren(frag);
   sizeRows();
@@ -1036,6 +1039,7 @@ const EDIT_KEY = 'taptalk.editing';
 function setEditing(on) {
   editing = on;
   try { sessionStorage.setItem(EDIT_KEY, on ? '1' : ''); } catch { /* not important */ }
+  if (!on) clearClip();
   render();
   if (on) armEditTimeout(); else { clearTimeout(editIdleTimer); applyPendingBoard(); shareIfUnsent(); }
 }
@@ -1296,6 +1300,8 @@ function openEditor(item, isNew = !item, onPage = pageId) {
   $('edHidden').checked = draft.hidden;
   $('edStrip').checked = Boolean(draft.strip);
   $('deleteBtn').hidden = draftIsNew;
+  $('clipCopy').hidden = draftIsNew;
+  $('clipCut').hidden = draftIsNew;
   $('moveRow').hidden = draftIsNew;
   fillLinkSelect();
   renderTypePicker();
@@ -1627,6 +1633,81 @@ function moveItem(dir) {
   render();
 }
 
+// ---------- Copy, cut and paste buttons ----------
+// Copy or Cut in the button editor; then, on any page, tap Paste here in the
+// bar at the bottom (or press Cmd/Ctrl+V on the computer). Copy can be pasted many times; Cut
+// moves the button when it's pasted. Kept until editing ends.
+
+const CLIP_KEY = 'taptalk.clip';
+
+function readClip() {
+  try { return JSON.parse(sessionStorage.getItem(CLIP_KEY)); } catch { return null; }
+}
+function clearClip() {
+  try { sessionStorage.removeItem(CLIP_KEY); } catch { /* not important */ }
+}
+function setClip(clip) {
+  try { sessionStorage.setItem(CLIP_KEY, JSON.stringify(clip)); } catch { /* not important */ }
+  render();
+  offerUndo(`Now go to a page and tap ${clip.cut ? 'Move here' : 'Paste here'}`, null);
+}
+
+// The bar at the bottom while a copied or cut button waits to be pasted.
+function showClipBar(clip) {
+  $('clipBar').hidden = !clip;
+  document.body.classList.toggle('has-clip', Boolean(clip));
+  if (!clip) return;
+  const img = $('clipImg');
+  if (clip.item.sym) { img.hidden = false; setSymbol(img, clip.item.sym); } else img.hidden = true;
+  $('clipText').textContent = `${clip.cut ? 'Moving' : 'Copied'} “${clip.item.label}”`;
+  $('clipPaste').textContent = clip.cut ? 'Move here' : 'Paste here';
+}
+$('clipPaste').addEventListener('click', () => pasteClip());
+$('clipClear').addEventListener('click', () => { clearClip(); render(); });
+
+function pasteClip() {
+  const clip = readClip();
+  const page = state.pages[pageId];
+  if (!clip || !page) return;
+  const at = now();
+  const source = state.pages[clip.page];
+  const from = clip.cut && source ? source.items.findIndex((it) => it.id === clip.item.id) : -1;
+  if (clip.cut && from < 0) { clearClip(); render(); return; } // already gone
+  const original = from >= 0 ? source.items[from] : null;
+  // A pasted button is a new one, so both copies can be changed separately.
+  const copy = { ...(original || clip.item), id: uid(), updatedAt: at };
+  if (!clip.cut) delete copy.strip; // the core strip keeps just the original
+  if (original) {
+    source.items.splice(from, 1);
+    source.orderAt = at;
+    state.deleted[original.id] = at;
+    clearClip();
+  }
+  page.items.push(copy);
+  page.orderAt = at;
+  markChanged();
+  save();
+  render();
+  const where = pageId;
+  offerUndo(original ? `Moved “${copy.label}” here` : `Pasted “${copy.label}”`, () => {
+    const list = state.pages[where]?.items;
+    const i = list ? list.findIndex((it) => it.id === copy.id) : -1;
+    if (i >= 0) { list.splice(i, 1); state.deleted[copy.id] = now(); }
+    if (original && state.pages[clip.page]) {
+      state.pages[clip.page].items.splice(Math.min(from, state.pages[clip.page].items.length), 0, { ...original, updatedAt: now() });
+      state.pages[clip.page].orderAt = now();
+    }
+    afterRestore();
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!editing || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'v') return;
+  if (document.querySelector('dialog[open]') || /input|textarea|select/i.test(e.target.tagName) || !readClip()) return;
+  e.preventDefault();
+  pasteClip();
+});
+
 // ---------- Undo and recently deleted ----------
 // No "are you sure?" pop-ups: every change can be undone straight away, and
 // deleted buttons can be restored later from Settings.
@@ -1646,6 +1727,7 @@ function writeTrash(list) {
 function offerUndo(text, undo) {
   undoAction = undo;
   $('undoText').textContent = text;
+  $('undoBtn').hidden = !undo; // some notes are just a heads-up
   $('undoBar').hidden = false;
   clearTimeout(undoTimer);
   undoTimer = setTimeout(() => { $('undoBar').hidden = true; undoAction = null; }, 8000);
@@ -1692,7 +1774,8 @@ $('deleteBtn').addEventListener('click', () => {
 });
 
 $('editorForm').addEventListener('submit', (e) => {
-  if (e.submitter?.value !== 'save') return;
+  const act = e.submitter?.value; // save, or copy / cut (which save first)
+  if (!['save', 'copy', 'cut'].includes(act)) return;
   draft.label = $('edLabel').value.trim();
   draft.say = $('edSay').value.trim();
   draft.hidden = $('edHidden').checked;
@@ -1716,10 +1799,15 @@ $('editorForm').addEventListener('submit', (e) => {
   const before = i >= 0 ? { ...items[i] } : null;
   const where = editPage;
   const saved = draft;
-  if (i >= 0) items[i] = draft; else items.push(draft);
-  markChanged();
-  save();
+  const changed = !before || JSON.stringify({ ...before, updatedAt: 0 }) !== JSON.stringify({ ...saved, updatedAt: 0 });
+  if (changed) {
+    if (i >= 0) items[i] = draft; else items.push(draft);
+    markChanged();
+    save();
+  }
+  if (act !== 'save') { setClip({ item: changed ? saved : before, page: where, cut: act === 'cut' }); return; }
   render();
+  if (!changed) return;
   offerUndo(before ? `Changed “${before.label}”` : `Added “${saved.label}”`, () => {
     const list = state.pages[where]?.items;
     const at = list ? list.findIndex((it) => it.id === saved.id) : -1;
