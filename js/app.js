@@ -10,7 +10,7 @@ import * as piper from './piper.js';
 import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 6; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip
+const STATE_VERSION = 7; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -37,8 +37,8 @@ const DEFAULT_SETTINGS = {
   rate: 0.9,
   pitch: 1.1,
   skin: DEFAULT_SKIN,
-  corners: 18,      // button corner radius, px
-  outline: 4,       // button outline thickness, px
+  corners: 8,       // button corner radius, px
+  outline: 0,       // button outline thickness, px
 };
 
 const $ = (id) => document.getElementById(id);
@@ -71,6 +71,7 @@ function loadState() {
       const removed = upgradePages(raw.pages, raw.version || 1);
       raw.deleted = { ...raw.deleted, ...Object.fromEntries(removed.map((id) => [id, Date.now()])) };
       if ((raw.version || 1) < 5) raw.settings = upgradeSettingsToNav(raw.settings || {}, raw.pages);
+      raw.settings = upgradeLook(raw.settings || {}, raw.version || 1);
       return {
         pages: raw.pages,
         settings: { ...DEFAULT_SETTINGS, ...raw.settings },
@@ -148,6 +149,13 @@ function movePagesToSideColumn(pages) {
   });
   for (const id of DEFAULT_NAV) if (pages[id] && !pages[id].icon) pages[id].icon = DEFAULT_PAGES[id]?.icon;
   return removed;
+}
+
+// v7: buttons became flat (no outline, slightly rounded). Boards still on the
+// old look (rounded, medium outline) move to the new one; a chosen look stays.
+function upgradeLook(settings, version) {
+  if (version >= 7 || (settings.corners ?? 18) !== 18 || (settings.outline ?? 4) !== 4) return settings;
+  return { ...settings, corners: 8, outline: 0 };
 }
 
 function upgradeSettingsToNav(settings, pages) {
@@ -1126,7 +1134,7 @@ $('importFile').addEventListener('change', async (e) => {
     await photos.clear();
     await photos.importAll(data.photos || {});
     upgradePages(data.pages, data.stateVersion || 1);
-    const imported = (data.stateVersion || 1) < 5 ? upgradeSettingsToNav(data.settings || {}, data.pages) : data.settings;
+    const imported = upgradeLook((data.stateVersion || 1) < 5 ? upgradeSettingsToNav(data.settings || {}, data.pages) : data.settings || {}, data.stateVersion || 1);
     replaceBoard(data.pages, { ...DEFAULT_SETTINGS, ...imported });
     markChanged();
     save();
@@ -1235,7 +1243,7 @@ function applyPendingBoard(force = false) {
   state.pages = board.pages;
   state.deleted = board.deleted;
   const keep = Object.fromEntries(sync.LOCAL_SETTINGS.map((k) => [k, state.settings[k]]));
-  state.settings = { ...DEFAULT_SETTINGS, ...board.settings, ...keep };
+  state.settings = { ...DEFAULT_SETTINGS, ...upgradeLook(board.settings || {}, version), ...keep };
   state.settingsAt = board.settingsAt;
   save();
   if (!state.pages[pageId]) { pageId = HOME; trail = []; }
