@@ -10,34 +10,30 @@
 // "u:<id>" = a photo or picture added by a caregiver.
 //
 // Each item is [label, symbol, type, extra] where extra may hold
-// { say: 'spoken text', link: 'pageId' }. A page with stay: true doesn't
+// { say: 'spoken text', link: 'pageId' }. A page's icon is its picture in the
+// left-hand column. A page with stay: true doesn't
 // jump back to Home after a word is chosen (used for the place pages).
 
 const F = (label, sym, link) => [label, sym, 'folder', { link }];
+
+// Pages in the left-hand column (always visible), top to bottom.
+export const DEFAULT_NAV = ['food', 'drinks', 'play', 'feelings', 'people', 'places'];
 
 export const DEFAULT_PAGES = {
   home: {
     name: 'Home',
     items: [
-      ['I', 'a:2617', 'pron'], ['want', 'a:5441', 'verb'], ['more', 'a:5508', 'desc'],
-      ['help', 'a:4570', 'verb'], ['stop', 'a:8289', 'neg'], ['yes', 'a:5584', 'social'],
-
-      ['you', 'a:2608', 'pron'], ['go', 'a:2432', 'verb'], ['like', 'a:2418', 'verb'],
-      ["don't like", 'a:22005', 'neg', { say: "don't like" }], ['all done', 'a:28429', 'social'], ['no', 'a:5526', 'neg'],
-
-      ['eat', 'a:2349', 'verb'], ['drink', 'a:2276', 'verb'], ['play', 'a:2439', 'verb'],
-      ['toilet', 'a:2430', 'noun'], ['hurt', 'a:5484', 'desc'], ['wait', 'a:8109', 'verb'],
-
-      F('Food', 'a:4610', 'food'), F('Drinks', 'a:4575', 'drinks'), F('Play', 'a:2439', 'play'),
-      F('Feelings', 'a:11476', 'feelings'), F('People', 'a:7116', 'people'), F('Places', 'a:31330', 'places'),
-
-      F('Actions', 'a:7297', 'actions'), F('Describe', 'a:4658', 'describe'), F('Body', 'a:2728', 'body'),
-      F('Animals', 'a:6901', 'animals'), F('Colours', 'a:5968', 'colours'), F('Chat', 'a:3345', 'chat'),
+      ['I', 'a:2617', 'pron'], ['want', 'a:5441', 'verb'], ['more', 'a:5508', 'desc'], ['help', 'a:4570', 'verb'], ['stop', 'a:8289', 'neg'],
+      ['you', 'a:2608', 'pron'], ['go', 'a:2432', 'verb'], ['like', 'a:2418', 'verb'], ["don't like", 'a:22005', 'neg', { say: "don't like" }], ['all done', 'a:28429', 'social'],
+      ['eat', 'a:2349', 'verb'], ['drink', 'a:2276', 'verb'], ['play', 'a:2439', 'verb'], ['toilet', 'a:2430', 'noun'], ['hurt', 'a:5484', 'desc'],
+      ['yes', 'a:5584', 'social'], ['no', 'a:5526', 'neg'], ['wait', 'a:8109', 'verb'], F('Chat', 'a:3345', 'chat'), F('Actions', 'a:7297', 'actions'),
+      F('Describe', 'a:4658', 'describe'), F('Body', 'a:2728', 'body'), F('Animals', 'a:6901', 'animals'), F('Colours', 'a:5968', 'colours'),
     ],
   },
 
   food: {
     name: 'Food',
+    icon: 'a:4610',
     items: [
       ['apple', 'a:2462', 'noun'], ['banana', 'a:2530', 'noun'], ['grapes', 'a:3247', 'noun'],
       ['strawberry', 'a:2400', 'noun'], ['orange', 'a:2483', 'noun'], ['crisps', 'a:5400', 'noun'],
@@ -53,6 +49,7 @@ export const DEFAULT_PAGES = {
 
   drinks: {
     name: 'Drinks',
+    icon: 'a:4575',
     items: [
       ['water', 'a:2248', 'noun'], ['milk', 'a:2445', 'noun'], ['juice', 'a:11461', 'noun'],
       ['apple juice', 'a:11403', 'noun'], ['squash', 'a:3248', 'noun'], ['milkshake', 'a:8503', 'noun'],
@@ -62,6 +59,7 @@ export const DEFAULT_PAGES = {
 
   play: {
     name: 'Play',
+    icon: 'a:2439',
     items: [
       F('Fun', 'a:36481', 'fun'),
       ['toys', 'a:9813', 'noun'], ['ball', 'a:2269', 'noun'], ['bubbles', 'a:6945', 'noun'],
@@ -94,6 +92,7 @@ export const DEFAULT_PAGES = {
 
   feelings: {
     name: 'Feelings',
+    icon: 'a:11476',
     items: [
       ['happy', 'a:3245', 'desc'], ['sad', 'a:2606', 'desc'], ['angry', 'a:2374', 'desc'],
       ['scared', 'a:2261', 'desc'], ['tired', 'a:2314', 'desc'], ['excited', 'a:39090', 'desc'],
@@ -107,6 +106,7 @@ export const DEFAULT_PAGES = {
 
   people: {
     name: 'People',
+    icon: 'a:7116',
     items: [
       ['me', 'a:2617', 'pron'], ['you', 'a:2608', 'pron'], ['mum', 'a:2458', 'pron'],
       ['dad', 'a:31146', 'pron'], ['brother', 'a:2423', 'pron'], ['sister', 'a:2422', 'pron'],
@@ -117,6 +117,7 @@ export const DEFAULT_PAGES = {
 
   places: {
     name: 'Places',
+    icon: 'a:31330',
     items: [
       F('School', 'a:3082', 'school'), F('Home', 'a:2317', 'athome'), F('Park', 'a:32987', 'park'), F('Shops', 'a:6618', 'shops'),
       F('Doctor', 'a:8263', 'doctor'), F('Car & bus', 'a:6981', 'travel'), F('Bedtime', 'a:28623', 'bedtime'), F('Bath time', 'a:31853', 'bathtime'),

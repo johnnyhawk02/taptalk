@@ -59,7 +59,10 @@
       </div>
     </div>
 
-    <main class="grid" id="grid" aria-live="off"></main>
+    <div class="board">
+      <nav class="sidebar" id="sidebar" aria-label="Pages"></nav>
+      <main class="grid" id="grid" aria-live="off"></main>
+    </div>
 
     <div class="undo-bar" id="undoBar" hidden role="status">
       <span id="undoText"></span>
@@ -89,6 +92,12 @@
             <option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
           </select>
         </label>
+        <label class="row">Rows on screen
+          <select id="setRows">
+            <option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+          </select>
+        </label>
+        <label class="row">Page column on the left <input type="checkbox" id="setSidebar"></label>
         <label class="row">Show words under pictures <input type="checkbox" id="setLabels"></label>
         <label class="row">Go back to Home after choosing from a page <input type="checkbox" id="setAutoHome"></label>
         <label class="row">Ignore repeated taps for
@@ -251,6 +260,17 @@
       <footer class="sheet-foot">
         <button type="button" class="wide-btn primary" id="cropDone">Use picture</button>
       </footer>
+    </div>
+  </dialog>
+
+  <!-- Add a page to the left-hand column -->
+  <dialog id="navPicker" class="sheet">
+    <div class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Add to the page column</h2>
+        <button type="button" class="pill" id="navPickerClose">Close</button>
+      </header>
+      <div class="nav-list" id="navList"></div>
     </div>
   </dialog>
 

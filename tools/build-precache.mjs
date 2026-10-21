@@ -15,7 +15,7 @@ const shell = [
 ];
 const syms = new Set(readdirSync('symbols/custom').map((f) => 'symbols/custom/' + f));
 for (const page of Object.values(DEFAULT_PAGES)) {
-  for (const [, sym] of page.items) {
+  for (const [, sym] of [...page.items, ...(page.icon ? [[null, page.icon]] : [])]) {
     if (sym.startsWith('m:')) syms.add('symbols/mulberry/' + encodeURIComponent(sym.slice(2)) + '.svg');
     if (sym.startsWith('a:')) syms.add('symbols/arasaac/' + encodeURIComponent(sym.slice(2)) + '.png');
   }

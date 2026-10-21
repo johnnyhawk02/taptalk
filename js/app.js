@@ -1,4 +1,4 @@
-import { DEFAULT_PAGES } from './board.js';
+import { DEFAULT_PAGES, DEFAULT_NAV } from './board.js';
 import * as photos from './photos.js';
 import * as gphotos from './gphotos.js';
 import { TO_ARASAAC } from './migrate.js';
@@ -8,7 +8,7 @@ import { openSheet } from './sheet.js';
 import { merge, fingerprint } from './merge.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 4; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page
+const STATE_VERSION = 5; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -22,7 +22,10 @@ const TYPES = [
 ];
 
 const DEFAULT_SETTINGS = {
-  cols: 6,
+  cols: 5,
+  rows: 5,          // rows on screen; pages with more buttons scroll
+  sidebar: true,    // left-hand column of page buttons
+  nav: [...DEFAULT_NAV],
   labels: true,
   autoHome: true,
   debounce: 0,
@@ -44,10 +47,13 @@ function buildDefaultPages() {
     pages[pageId] = {
       name: page.name,
       ...(page.stay && { stay: true }),
-      // Stable ids, so the starting board is the same on every device.
-      items: page.items.map(([label, sym, type, extra = {}], i) => ({
-        id: `d-${pageId}-${i}`, label, sym, type, say: extra.say || '', link: extra.link || '', hidden: false,
-      })),
+      ...(page.icon && { icon: page.icon }),
+      // Stable ids (from the word), so the starting board is the same on every device.
+      items: page.items.map(([label, sym, type, extra = {}], i, all) => {
+        const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const dup = all.slice(0, i).some(([l]) => l.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug);
+        return { id: `d-${pageId}-${slug}${dup ? '-' + i : ''}`, label, sym, type, say: extra.say || '', link: extra.link || '', hidden: false };
+      }),
     };
   }
   return pages;
@@ -57,7 +63,9 @@ function loadState() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY));
     if (raw && raw.pages && raw.pages[HOME]) {
-      upgradePages(raw.pages, raw.version || 1);
+      const removed = upgradePages(raw.pages, raw.version || 1);
+      raw.deleted = { ...raw.deleted, ...Object.fromEntries(removed.map((id) => [id, Date.now()])) };
+      if ((raw.version || 1) < 5) raw.settings = upgradeSettingsToNav(raw.settings || {}, raw.pages);
       return {
         pages: raw.pages,
         settings: { ...DEFAULT_SETTINGS, ...raw.settings },
@@ -106,6 +114,34 @@ function upgradePages(pages, version) {
     }
   }
   if (version < 4) addMissingPages(pages);
+  return version < 5 ? movePagesToSideColumn(pages) : [];
+}
+
+// v5: Food, Drinks, Play, Feelings, People and Places live in the left-hand
+// column, so their buttons come off the Home grid (their pictures become the
+// column icons). Returns the removed buttons' ids.
+function movePagesToSideColumn(pages) {
+  const home = pages[HOME];
+  if (!home) return [];
+  const removed = [];
+  home.items = home.items.filter((it) => {
+    if (it.type !== 'folder' || !DEFAULT_NAV.includes(it.link) || !pages[it.link]) return true;
+    pages[it.link].icon ||= it.sym;
+    removed.push(it.id);
+    return false;
+  });
+  for (const id of DEFAULT_NAV) if (pages[id] && !pages[id].icon) pages[id].icon = DEFAULT_PAGES[id]?.icon;
+  return removed;
+}
+
+function upgradeSettingsToNav(settings, pages) {
+  return {
+    ...settings,
+    cols: !settings.cols || settings.cols === 6 ? 5 : settings.cols, // 6 was the old default
+    rows: settings.rows || 5,
+    sidebar: settings.sidebar ?? true,
+    nav: settings.nav || DEFAULT_NAV.filter((id) => pages[id]),
+  };
 }
 
 // New starting pages (e.g. School, Bedtime) get added to saved boards, with
@@ -280,8 +316,9 @@ function render() {
   $('pageTitle').textContent = page.name;
   grid.style.setProperty('--cols', state.settings.cols);
 
+  renderSidebar();
   const frag = document.createDocumentFragment();
-  if (pageId !== HOME) frag.append(backTile());
+  if (pageId !== HOME && !state.settings.sidebar) frag.append(backTile());
   // Hidden buttons keep their space so nothing else moves (motor planning).
   for (const item of page.items) frag.append(item.hidden && !editing ? gapTile() : tileFor(item));
   if (editing) frag.append(addTile());
@@ -324,7 +361,7 @@ function addTile() {
   const b = document.createElement('button');
   b.className = 'tile add-tile';
   b.dataset.action = 'add';
-  b.innerHTML = '<span class="plus">+</span><span class="label">Add button</span>';
+  b.innerHTML = '<span class="plus">+</span><span class="label">Add</span>';
   return b;
 }
 
@@ -346,12 +383,15 @@ function sizeRows() {
   const colW = (grid.clientWidth - gap * (cols - 1)) / cols;
   // Fill the screen when everything fits; otherwise keep buttons big enough
   // to hit and let the page scroll.
-  const fit = (avail - gap * (rows - 1)) / rows;
-  const min = Math.min(colW * 0.8, 110);
+  // A fixed number of rows fills the screen (5 × 5 by default); pages with
+  // more buttons scroll. The compact editing view on the computer fits more.
+  const onScreen = Math.max(1, state.settings.rows || 5);
   const rowH = isCompact()
-    ? Math.max(64, Math.min(fit, colW * 0.85, 120))
-    : Math.max(min, Math.min(fit, colW * 1.15));
+    ? Math.max(64, Math.min((avail - gap * (rows - 1)) / rows, colW * 0.85, 120))
+    : Math.max(56, (avail - gap * (onScreen - 1)) / onScreen);
   grid.style.setProperty('--row-h', Math.floor(rowH) + 'px');
+  grid.style.setProperty('--col-w', Math.floor(colW) + 'px');
+  sizeSidebar(rowH);
 }
 
 function renderStrip() {
@@ -370,15 +410,115 @@ function renderStrip() {
   strip.scrollLeft = strip.scrollWidth;
 }
 
+// ---------- Left-hand column ----------
+// Back, then the pages that are always one tap away (like a menu down the
+// side). In edit mode each page has a × to take it out, and + Add puts any
+// page in.
+
+const sidebar = $('sidebar');
+
+function navIcon(id) {
+  const page = state.pages[id];
+  if (page?.icon) return page.icon;
+  for (const p of Object.values(state.pages)) {
+    const link = p.items.find((it) => it.type === 'folder' && it.link === id);
+    if (link) return link.sym;
+  }
+  return '';
+}
+
+function navButton(label, sym, cls) {
+  const b = document.createElement('button');
+  b.className = 'nav-btn ' + cls;
+  const img = document.createElement('img');
+  if (sym) setSymbol(img, sym); else img.hidden = true;
+  const span = document.createElement('span');
+  span.textContent = label;
+  b.append(img, span);
+  return b;
+}
+
+function renderSidebar() {
+  const on = state.settings.sidebar;
+  sidebar.hidden = !on;
+  document.body.classList.toggle('with-sidebar', on);
+  if (!on) return;
+  const parts = [];
+  const back = navButton('Back', '', 'nav-back');
+  back.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M30 10 16 24l14 14"/></svg>');
+  back.disabled = pageId === HOME;
+  back.addEventListener('click', goBack);
+  parts.push(back);
+  for (const id of state.settings.nav || []) {
+    const page = state.pages[id];
+    if (!page) continue;
+    const b = navButton(page.name, navIcon(id), 'nav-page');
+    if (id === pageId) b.setAttribute('aria-current', 'page');
+    b.addEventListener('click', () => goTo(id, { fromNav: true }));
+    if (editing) {
+      const x = document.createElement('span');
+      x.className = 'nav-remove';
+      x.textContent = '×';
+      x.setAttribute('role', 'button');
+      x.setAttribute('aria-label', `Take ${page.name} out of the column`);
+      x.addEventListener('click', (e) => { e.stopPropagation(); setNav(state.settings.nav.filter((n) => n !== id), `Took “${page.name}” out of the column`); });
+      b.append(x);
+    }
+    parts.push(b);
+  }
+  if (editing) {
+    const add = navButton('+ Add', '', 'nav-add');
+    add.addEventListener('click', openNavPicker);
+    parts.push(add);
+  }
+  sidebar.replaceChildren(...parts);
+}
+
+function sizeSidebar(rowH) {
+  if (!state.settings.sidebar) return;
+  const count = sidebar.children.length || 1;
+  const gap = parseFloat(getComputedStyle(sidebar).rowGap) || 10;
+  const fit = (sidebar.clientHeight - gap * (count - 1)) / count;
+  sidebar.style.setProperty('--nav-h', Math.floor(Math.max(58, Math.min(fit, rowH))) + 'px');
+}
+
+function setNav(nav, undoText) {
+  const before = state.settings.nav;
+  state.settings.nav = nav;
+  touchSettings();
+  markChanged();
+  save();
+  render();
+  if (undoText) {
+    offerUndo(undoText, () => { state.settings.nav = before; touchSettings(); afterRestore(); });
+  }
+}
+
+function openNavPicker() {
+  const list = $('navList');
+  const inNav = new Set(state.settings.nav);
+  const choices = Object.entries(state.pages).filter(([id]) => id !== HOME && !inNav.has(id));
+  list.replaceChildren(...choices.map(([id, page]) => {
+    const b = navButton(page.name, navIcon(id), 'nav-page');
+    b.type = 'button';
+    b.addEventListener('click', () => { $('navPicker').close(); setNav([...state.settings.nav, id]); });
+    return b;
+  }));
+  if (!choices.length) list.innerHTML = '<p class="hint">Every page is already in the column.</p>';
+  openSheet($('navPicker'));
+}
+$('navPickerClose').addEventListener('click', () => $('navPicker').close());
+
 // ---------- Interaction ----------
 
 // Pages opened from other pages remember the way back, so "back" on School
 // returns to Places rather than Home.
 let trail = [];
 
-function goTo(id) {
+function goTo(id, { fromNav = false } = {}) {
   const next = state.pages[id] ? id : HOME;
   if (next === HOME) trail = [];
+  else if (fromNav) trail = [HOME];
   else if (next !== pageId) trail.push(pageId);
   pageId = next;
   grid.scrollTop = 0;
@@ -502,6 +642,8 @@ function openSettings() {
   const s = state.settings;
   $('startEditing').hidden = editing;
   $('setCols').value = String(s.cols);
+  $('setRows').value = String(s.rows || 5);
+  $('setSidebar').checked = s.sidebar;
   $('setLabels').checked = s.labels;
   $('setAutoHome').checked = s.autoHome;
   $('setDebounce').value = String(s.debounce);
@@ -546,6 +688,8 @@ function bindSetting(id, key, read) {
   });
 }
 bindSetting('setCols', 'cols', (el) => Number(el.value));
+bindSetting('setRows', 'rows', (el) => Number(el.value));
+bindSetting('setSidebar', 'sidebar', (el) => el.checked);
 bindSetting('setLabels', 'labels', (el) => el.checked);
 bindSetting('setAutoHome', 'autoHome', (el) => el.checked);
 bindSetting('setDebounce', 'debounce', (el) => Number(el.value));
@@ -639,7 +783,8 @@ $('importFile').addEventListener('change', async (e) => {
     await photos.clear();
     await photos.importAll(data.photos || {});
     upgradePages(data.pages, data.stateVersion || 1);
-    replaceBoard(data.pages, { ...DEFAULT_SETTINGS, ...data.settings });
+    const imported = (data.stateVersion || 1) < 5 ? upgradeSettingsToNav(data.settings || {}, data.pages) : data.settings;
+    replaceBoard(data.pages, { ...DEFAULT_SETTINGS, ...imported });
     markChanged();
     save();
     $('settings').close();

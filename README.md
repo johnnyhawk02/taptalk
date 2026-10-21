@@ -4,7 +4,8 @@ A simple picture talker (AAC) for a child who doesn't speak, built as a web app 
 
 ## What the child sees
 
-- **Home board**: 18 core words that are always in the same place (I, want, more, help, stop, yes, you, go, like, don't like, all done, no, eat, drink, play, toilet, hurt, wait) and 12 pages (Food, Drinks, Play, Feelings, People, Places, Actions, Describe, Body, Animals, Colours, Chat). That's 22 pages and 423 buttons in total.
+- **Page column** down the left, always visible: **Back**, then Food, Drinks, Play, Feelings, People and Places (edit mode: × to take a page out, + Add to put any page in).
+- **Home board** (5 × 5): 18 core words (I, want, more, help, stop, you, go, like, don't like, all done, eat, drink, play, toilet, hurt, yes, no, wait) plus Chat, Actions, Describe, Body, Animals and Colours. Grid size is adjustable (buttons per row, rows on screen); bigger pages scroll.
 - **Places** opens 8 place pages: School, Home, Park, Shops, Doctor, Car & bus, Bedtime and Bath time. Each has the words you need there. On these pages, choosing a word keeps the page open so you can build a sentence, and **back** goes up one level.
 - **Play → Fun** has favourite things to do: Mr Tumble, Singing Hands, CBeebies, iPad, YouTube, Peppa Pig, Bluey, songs, soft play, bike ride and more. ARASAAC has no pictures of TV characters, so these use stand-in pictures (a clown for Mr Tumble, for example). Use *Paste photo* to put your child's real favourites on them.
 - Tapping a button says the word and adds it to the sentence bar at the top. Tapping the bar says the whole sentence. ⌫ removes the last word and ✕ clears the bar.

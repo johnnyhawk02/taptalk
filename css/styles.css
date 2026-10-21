@@ -154,10 +154,42 @@ button { cursor: pointer; }
 .undo-bar .pill { background: #fff; color: #1d1d1f; border: none; }
 #trashList .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ---------- Board: left-hand page column + grid ---------- */
+.board { flex: 1; min-height: 0; display: flex; gap: var(--gap); }
+.sidebar { flex: none; width: clamp(128px, 15vw, 196px); display: flex; flex-direction: column; gap: var(--gap); overflow-y: auto; scrollbar-width: none; }
+.sidebar[hidden] { display: none; }
+.sidebar::-webkit-scrollbar { display: none; }
+.nav-btn {
+  position: relative; flex: 0 0 var(--nav-h, 90px); display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+  border-radius: var(--radius); border: 4px solid var(--folder); background: var(--folder-bg); color: var(--ink);
+  font-weight: 750; font-size: clamp(15px, calc(var(--nav-h, 90px) * 0.2), 20px); text-align: left; min-width: 0;
+}
+.nav-btn img { width: min(56px, calc(var(--nav-h, 90px) - 24px)); height: min(56px, calc(var(--nav-h, 90px) - 24px)); object-fit: contain; flex: none; }
+.nav-btn span:not(.nav-remove) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.nav-btn[aria-current="page"] { background: #fff; border-color: var(--ink); box-shadow: inset 6px 0 0 var(--q); }
+.nav-btn:active { transform: scale(0.96); }
+.nav-back { background: var(--surface); border-color: var(--line); justify-content: center; }
+.nav-back svg { width: 34px; height: 34px; fill: none; stroke: var(--ink); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.nav-back:disabled { opacity: 0.35; }
+.nav-add { background: transparent; border-style: dashed; border-color: var(--q); color: var(--q); justify-content: center; }
+.nav-remove { position: absolute; top: -8px; right: -8px; width: 30px; height: 30px; border-radius: 50%; background: var(--neg); color: #fff; display: grid; place-items: center; font-size: 22px; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+/* Narrow screens (upright iPad): picture above the word, like the buttons. */
+@media (max-width: 1000px) {
+  .sidebar .nav-btn { flex-direction: column; justify-content: center; gap: 2px; padding: 4px; text-align: center; font-size: clamp(14px, calc(var(--nav-h, 90px) * 0.17), 17px); }
+  .sidebar .nav-btn img { width: 100%; height: calc(var(--nav-h, 90px) - 40px); }
+  .sidebar .nav-btn span { max-width: 100%; }
+  .sidebar .nav-back { flex-direction: row; }
+  .nav-remove { width: 26px; height: 26px; font-size: 19px; top: -6px; right: -6px; }
+}
+.nav-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; padding: 16px 20px 20px; overflow-y: auto; --nav-h: 72px; }
+.nav-list .nav-btn { flex: none; height: 72px; }
+.compact .sidebar { width: 150px; }
+
 /* ---------- Grid ---------- */
 .grid {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
   grid-auto-rows: var(--row-h, 120px);
@@ -189,7 +221,7 @@ button { cursor: pointer; }
 .tile img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
 .tile .label {
   flex: none;
-  font-size: clamp(15px, calc(var(--row-h, 120px) * 0.14), 26px);
+  font-size: clamp(13px, min(calc(var(--row-h, 120px) * 0.14), calc(var(--col-w, 200px) * 0.13)), 26px);
   font-weight: 700;
   line-height: 1.1;
   text-align: center;
