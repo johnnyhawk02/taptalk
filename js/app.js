@@ -581,7 +581,8 @@ function sizeSidebar(rowH) {
   // (Back across the top).
   sidebar.classList.remove('crowded', 'two-col');
   const gap = parseFloat(getComputedStyle(sidebar).rowGap) || 10;
-  const height = sidebar.clientHeight;
+  const pad = getComputedStyle(sidebar);
+  const height = sidebar.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
   const single = (height - gap * (count - 1)) / count;
   let rows = count;
   if (single < 52) {
