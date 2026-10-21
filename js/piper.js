@@ -1,0 +1,207 @@
+// Natural-sounding voices (Piper) that run on the device itself. iPads don't
+// let web apps use the voices downloaded in iPad Settings, so TapTalk carries
+// its own. A voice is downloaded once into the 'taptalk-voices' cache (the
+// engine, ~31 MB, the first time, plus ~63 MB per voice) and then works offline.
+// The speech is made in piper-worker.js and played here with Web Audio.
+
+const CACHE = 'taptalk-voices';
+const HF = 'https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/';
+const ENGINE = new URL('../vendor/piper/', import.meta.url).href;
+const ENGINE_FILES = {
+  'ort.wasm.bundle.min.mjs': 72812,
+  'ort-wasm-simd-threaded.wasm': 12361745,
+  'piper_phonemize.js': 120714,
+  'piper_phonemize.wasm': 635212,
+  'piper_phonemize.data': 18077249,
+};
+const VOICE_BYTES = 63.2e6;
+
+export const VOICES = [
+  { id: 'piper:jenny', name: 'Jenny', about: 'woman, southern English', path: 'jenny_dioco/medium/en_GB-jenny_dioco-medium' },
+  { id: 'piper:cori', name: 'Cori', about: 'woman, calm and clear', path: 'cori/medium/en_GB-cori-medium' },
+  { id: 'piper:alba', name: 'Alba', about: 'woman, Scottish', path: 'alba/medium/en_GB-alba-medium' },
+  { id: 'piper:southern', name: 'Southern English woman', about: 'brighter', path: 'southern_english_female/low/en_GB-southern_english_female-low' },
+  { id: 'piper:alan', name: 'Alan', about: 'man', path: 'alan/medium/en_GB-alan-medium' },
+  { id: 'piper:northern', name: 'Northern English man', about: 'Yorkshire', path: 'northern_english_male/medium/en_GB-northern_english_male-medium' },
+];
+
+export const isPiper = (id) => typeof id === 'string' && id.startsWith('piper:');
+const voiceOf = (id) => VOICES.find((v) => v.id === id);
+const engineUrls = () => Object.keys(ENGINE_FILES).map((f) => ENGINE + f);
+const voiceUrls = (v) => [HF + v.path + '.onnx.json', HF + v.path + '.onnx'];
+
+async function missing(urls) {
+  const cache = await caches.open(CACHE);
+  const out = [];
+  for (const url of urls) if (!(await cache.match(url))) out.push(url);
+  return out;
+}
+
+/** Whether a voice (and the engine) is on this device. */
+export async function downloaded(id) {
+  const v = voiceOf(id);
+  if (!v || !('caches' in window)) return false;
+  return (await missing([...engineUrls(), ...voiceUrls(v)])).length === 0;
+}
+
+const bytesOf = (url) => ENGINE_FILES[url.slice(ENGINE.length)] ?? (url.endsWith('.onnx') ? VOICE_BYTES : 5000);
+
+/** Megabytes still to download for this voice. */
+export async function downloadSize(id) {
+  const todo = await missing([...engineUrls(), ...voiceUrls(voiceOf(id))]);
+  return Math.round(todo.reduce((n, url) => n + bytesOf(url), 0) / 1e6);
+}
+
+/** Download a voice; progress(fraction) is called as it goes. */
+export async function download(id, progress = () => {}) {
+  navigator.storage?.persist?.().catch(() => {});
+  const cache = await caches.open(CACHE);
+  const todo = await missing([...engineUrls(), ...voiceUrls(voiceOf(id))]);
+  const total = todo.reduce((n, url) => n + bytesOf(url), 0);
+  let got = 0;
+  for (const url of todo) {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`The download stopped (${res.status}). Try again on Wi-Fi.`);
+    const reader = res.body.getReader();
+    const chunks = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      got += value.length;
+      progress(Math.min(0.99, got / total));
+    }
+    const type = res.headers.get('Content-Type') || 'application/octet-stream';
+    await cache.put(url, new Response(new Blob(chunks, { type }), { headers: { 'Content-Type': type } }));
+  }
+  progress(1);
+}
+
+// ---------- The worker: one job at a time, spoken words before warm-ups ----------
+
+let worker = null;
+let busy = null;
+const pending = [];
+let jobNo = 0;
+let readyId = null;
+let loading = null; // { id, promise }
+
+function startWorker() {
+  worker = new Worker(new URL('./piper-worker.js', import.meta.url), { type: 'module' });
+  worker.onmessage = ({ data }) => {
+    const job = busy;
+    busy = null;
+    if (data.type === 'error') job?.reject(new Error(data.message));
+    else job?.resolve(data);
+    pump();
+  };
+  worker.onerror = (e) => {
+    e.preventDefault?.();
+    for (const job of [busy, ...pending.splice(0)]) job?.reject(new Error('The voice stopped working.'));
+    busy = null;
+    worker.terminate();
+    worker = null;
+    readyId = null;
+    loading = null;
+  };
+}
+
+function post(msg, urgent) {
+  return new Promise((resolve, reject) => {
+    const job = { msg: { ...msg, n: ++jobNo }, urgent, resolve, reject };
+    const at = urgent ? pending.findIndex((j) => !j.urgent) : -1;
+    if (at === -1) pending.push(job); else pending.splice(at, 0, job);
+    pump();
+  });
+}
+
+function pump() {
+  if (busy || !pending.length) return;
+  if (!worker) startWorker();
+  busy = pending.shift();
+  worker.postMessage(busy.msg);
+}
+
+/** True once the voice is loaded and can speak straight away. */
+export const isReady = (id) => readyId === id;
+
+/** Load a downloaded voice so it is ready to speak (takes a few seconds). */
+export function prepare(id) {
+  if (readyId === id) return Promise.resolve();
+  if (loading?.id === id) return loading.promise;
+  const v = voiceOf(id);
+  const promise = post({ type: 'load', engine: ENGINE, voice: { key: id, base: HF + v.path } }, true)
+    .then(() => { readyId = id; memo.clear(); })
+    .finally(() => { if (loading?.promise === promise) loading = null; });
+  loading = { id, promise };
+  return promise;
+}
+
+// ---------- Speech, remembered so a button's word plays instantly next time ----------
+
+const memo = new Map();
+const MEMO_MAX = 400;
+
+async function synth(id, text, lengthScale, urgent) {
+  const key = `${lengthScale}|${text}`;
+  const hit = memo.get(key);
+  if (hit) { memo.delete(key); memo.set(key, hit); return hit; }
+  await prepare(id);
+  const audio = await post({ type: 'say', text, lengthScale }, urgent);
+  memo.set(key, audio);
+  if (memo.size > MEMO_MAX) memo.delete(memo.keys().next().value);
+  return audio;
+}
+
+// The speed and pitch sliders were made for the iPad voices (1 = normal).
+// Pitch is raised by playing faster, so the speech is made slower to match.
+const pitchFactor = (pitch) => 1 + (pitch - 1) * 0.5;
+const scaleFor = ({ rate, pitch }) => Math.round((pitchFactor(pitch) / rate) * 100) / 100;
+
+let ctx = null;
+let playing = null;
+let speakNo = 0;
+
+/** Call during a tap: iPads only allow sound to start from one. */
+export function unlock() {
+  // Play like a media app, so the iPad's silent mode doesn't mute Robyn.
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older iPadOS */ }
+  ctx ||= new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
+}
+
+export function stop() {
+  speakNo++;
+  try { playing?.stop(); } catch { /* already finished */ }
+  playing = null;
+}
+
+/** Speak text in a Piper voice. Resolves when it has finished. */
+export async function speak(id, text, opts) {
+  unlock();
+  stop();
+  const mine = speakNo;
+  const { pcm, sampleRate } = await synth(id, text, scaleFor(opts), true);
+  if (mine !== speakNo) return; // something newer was said meanwhile
+  const buf = ctx.createBuffer(1, pcm.length, sampleRate);
+  buf.copyToChannel(pcm, 0);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = pitchFactor(opts.pitch);
+  src.connect(ctx.destination);
+  await new Promise((resolve) => {
+    src.onended = resolve;
+    playing = src;
+    src.start();
+  });
+  if (playing === src) playing = null;
+}
+
+/** Make words ahead of time (e.g. a page's buttons) so taps play instantly. */
+export function warm(id, texts, opts) {
+  if (readyId !== id) return;
+  const ls = scaleFor(opts);
+  for (const text of new Set(texts)) {
+    if (text && !memo.has(`${ls}|${text}`)) synth(id, text, ls, false).catch(() => {});
+  }
+}

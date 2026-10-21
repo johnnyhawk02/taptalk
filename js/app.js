@@ -6,6 +6,7 @@ import * as sync from './sync.js';
 import { editPicture, initCropper } from './cropper.js';
 import { openSheet } from './sheet.js';
 import { merge, fingerprint } from './merge.js';
+import * as piper from './piper.js';
 
 const STORE_KEY = 'taptalk.v1';
 const STATE_VERSION = 6; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip
@@ -290,12 +291,35 @@ function scoreVoice(v) {
   return s;
 }
 
+// The iPad voice used when the chosen voice is an iPad one, and as the backup
+// while a natural (Piper) voice isn't downloaded or ready yet.
 function currentVoice() {
   return voices.find((v) => v.voiceURI === state.settings.voice) || voices[0] || null;
 }
 
+// Natural voices on this device: id -> 'ready' | 'downloaded' | progress (0–1).
+const piperState = {};
+const voiceTrouble = new Set();
+
+function stopSpeaking() {
+  piper.stop();
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
 function speak(text) {
-  if (!text || !('speechSynthesis' in window)) return Promise.resolve();
+  if (!text) return Promise.resolve();
+  const id = state.settings.voice;
+  if (piper.isPiper(id) && piperState[id] === 'ready') {
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    return piper.speak(id, text, state.settings).catch(() => speakOnDevice(text));
+  }
+  if (piper.isPiper(id) && piperState[id] === 'downloaded') prepareVoice(id);
+  return speakOnDevice(text);
+}
+
+function speakOnDevice(text) {
+  piper.stop();
+  if (!('speechSynthesis' in window)) return Promise.resolve();
   speechSynthesis.cancel();
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text);
@@ -345,6 +369,7 @@ function render() {
 
   grid.replaceChildren(frag);
   sizeRows();
+  if (!editing) warmPage();
 }
 
 function tileFor(item) {
@@ -636,7 +661,7 @@ $('strip').addEventListener('click', async () => {
 });
 
 $('backspaceBtn').addEventListener('click', () => { sentence.pop(); renderStrip(); });
-$('clearBtn').addEventListener('click', () => { sentence = []; renderStrip(); speechSynthesis?.cancel(); applyPendingBoard(); });
+$('clearBtn').addEventListener('click', () => { sentence = []; renderStrip(); stopSpeaking(); applyPendingBoard(); });
 $('homeBtn').addEventListener('click', () => goTo(HOME));
 
 // Press and hold to open grown-up settings, so the child can't open it by accident.
@@ -718,9 +743,85 @@ function openSettings() {
 
 function fillVoiceSelect() {
   const sel = $('setVoice');
-  const cur = currentVoice();
-  sel.replaceChildren(...voices.map((v) => new Option(`${v.name}${voiceQuality(v) && !/premium|enhanced|natural/i.test(v.name) ? ' – ' + voiceQuality(v) : ''} (${v.lang.replace('_', '-')})`, v.voiceURI, false, v === cur)));
-  if (!voices.length) sel.append(new Option('Default voice', ''));
+  const chosen = state.settings.voice;
+  const cur = piper.isPiper(chosen) ? null : currentVoice();
+  const natural = document.createElement('optgroup');
+  natural.label = 'Natural voices (download once, work offline)';
+  natural.append(...piper.VOICES.map((v) => new Option(`${v.name} – ${v.about}`, v.id, false, v.id === chosen)));
+  const device = document.createElement('optgroup');
+  device.label = 'iPad voices';
+  device.append(...voices.map((v) => new Option(`${v.name}${voiceQuality(v) && !/premium|enhanced|natural/i.test(v.name) ? ' – ' + voiceQuality(v) : ''} (${v.lang.replace('_', '-')})`, v.voiceURI, false, v === cur)));
+  if (!voices.length) device.append(new Option('Default voice', '', false, !piper.isPiper(chosen)));
+  sel.replaceChildren(natural, device);
+  showVoiceStatus();
+}
+
+// ---------- Natural voices: download, get ready, say how it's going ----------
+
+async function checkVoice(id) {
+  if (!piper.isPiper(id) || piperState[id] !== undefined) return;
+  if (await piper.downloaded(id)) piperState[id] ??= 'downloaded';
+  showVoiceStatus();
+}
+
+function prepareVoice(id) {
+  if (piperState[id] !== 'downloaded') return;
+  voiceTrouble.delete(id);
+  piper.prepare(id).then(() => {
+    piperState[id] = 'ready';
+    warmPage();
+  }).catch(() => { voiceTrouble.add(id); /* stays on the iPad voice; tried again on the next tap */ })
+    .finally(showVoiceStatus);
+  showVoiceStatus();
+}
+
+async function showVoiceStatus() {
+  const id = state.settings.voice;
+  const text = $('voiceStatusText');
+  const btn = $('voiceDownload');
+  btn.hidden = true;
+  if (!piper.isPiper(id)) {
+    text.textContent = 'Tip: the natural voices sound much better.';
+    return;
+  }
+  const st = piperState[id];
+  if (typeof st === 'number') text.textContent = `Downloading… ${Math.round(st * 100)}%`;
+  else if (st === 'ready') text.textContent = 'Ready. Works offline.';
+  else if (st === 'downloaded') text.textContent = voiceTrouble.has(id) ? 'This voice won\'t start here; the iPad voice speaks.' : 'Getting the voice ready…';
+  else if (st === 'failed') { text.textContent = 'Download stopped. Check the Wi-Fi and try again.'; btn.hidden = false; }
+  else {
+    if (!('caches' in window)) { text.textContent = 'This browser can\'t keep voices. The iPad voice is used.'; return; }
+    const mb = await piper.downloadSize(id);
+    if (state.settings.voice !== id || piperState[id] !== undefined) return;
+    text.textContent = `One-off download, ${mb} MB. Until then, the iPad voice speaks.`;
+    btn.hidden = false;
+  }
+}
+
+$('voiceDownload').addEventListener('click', async () => {
+  const id = state.settings.voice;
+  if (!piper.isPiper(id) || typeof piperState[id] === 'number') return;
+  piperState[id] = 0;
+  showVoiceStatus();
+  try {
+    await piper.download(id, (f) => { piperState[id] = f; if (state.settings.voice === id) showVoiceStatus(); });
+    piperState[id] = 'downloaded';
+    prepareVoice(id);
+  } catch {
+    piperState[id] = 'failed';
+  }
+  showVoiceStatus();
+});
+
+// Make the words on screen ahead of time, so taps speak instantly.
+function warmPage() {
+  const id = state.settings.voice;
+  if (!piper.isReady(id)) return;
+  const page = state.pages[pageId] || state.pages[HOME];
+  const words = [...page.items, ...stripItems().map(({ it }) => it)]
+    .filter((it) => !it.hidden && it.type !== 'folder')
+    .map((it) => it.say || it.label);
+  piper.warm(id, words, state.settings);
 }
 
 function renderSwatches() {
@@ -753,6 +854,11 @@ bindSetting('setAutoHome', 'autoHome', (el) => el.checked);
 bindSetting('setDebounce', 'debounce', (el) => Number(el.value));
 bindSetting('setSpeakTap', 'speakOnTap', (el) => el.checked);
 bindSetting('setVoice', 'voice', (el) => el.value);
+$('setVoice').addEventListener('change', () => {
+  const id = state.settings.voice;
+  showVoiceStatus();
+  checkVoice(id).then(() => prepareVoice(id));
+});
 bindSetting('setRate', 'rate', (el) => Number(el.value));
 bindSetting('setPitch', 'pitch', (el) => Number(el.value));
 
@@ -1597,6 +1703,11 @@ if ('speechSynthesis' in window) {
   loadVoices();
   speechSynthesis.addEventListener?.('voiceschanged', loadVoices);
 }
+// Get the natural voice ready in the background; the iPad voice covers the
+// first few seconds.
+checkVoice(state.settings.voice).then(() => prepareVoice(state.settings.voice));
+// iPads only let sound start from a tap, so wake the audio on the first one.
+document.addEventListener('pointerdown', () => { if (piper.isPiper(state.settings.voice)) piper.unlock(); }, { capture: true });
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   // updateViaCache 'none': when checking for a new version, fetch the file
