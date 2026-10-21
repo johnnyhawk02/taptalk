@@ -10,7 +10,7 @@ import * as piper from './piper.js';
 import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 9; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored, 9 = 5 × 4 grid
+const STATE_VERSION = 10; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored, 9 = 5 × 4 grid, 10 = Describe/Body/Animals/Colours in the column
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -72,6 +72,8 @@ function loadState() {
       raw.deleted = { ...raw.deleted, ...Object.fromEntries(removed.map((id) => [id, Date.now()])) };
       if ((raw.version || 1) < 5) raw.settings = upgradeSettingsToNav(raw.settings || {}, raw.pages);
       raw.settings = upgradeLook(raw.settings || {}, raw.version || 1);
+      const nav10 = addV10Nav(raw.settings, raw.pages, raw.version || 1);
+      if (nav10) { raw.settings = nav10; raw.settingsAt = Date.now(); }
       return {
         pages: raw.pages,
         settings: { ...DEFAULT_SETTINGS, ...raw.settings },
@@ -120,7 +122,7 @@ function upgradePages(pages, version) {
     }
   }
   if (version < 4) addMissingPages(pages);
-  const removed = version < 5 ? movePagesToSideColumn(pages) : [];
+  const removed = version < 5 ? movePagesToSideColumn(pages, DEFAULT_NAV) : version < 10 ? movePagesToSideColumn(pages, NAV_V10) : [];
   if (version < 8) markStripWords(pages);
   return removed;
 }
@@ -140,18 +142,35 @@ function markStripWords(pages) {
 // v5: Food, Drinks, Play, Feelings, People and Places live in the left-hand
 // column, so their buttons come off the Home grid (their pictures become the
 // column icons). Returns the removed buttons' ids.
-function movePagesToSideColumn(pages) {
+// v10: Describe, Body, Animals and Colours moved there too, so Home fits a
+// 5 × 4 grid.
+const NAV_V10 = ['describe', 'body', 'animals', 'colours'];
+
+function movePagesToSideColumn(pages, ids) {
   const home = pages[HOME];
   if (!home) return [];
   const removed = [];
   home.items = home.items.filter((it) => {
-    if (it.type !== 'folder' || !DEFAULT_NAV.includes(it.link) || !pages[it.link]) return true;
+    if (it.type !== 'folder' || !ids.includes(it.link) || !pages[it.link]) return true;
     pages[it.link].icon ||= it.sym;
     removed.push(it.id);
     return false;
   });
-  for (const id of DEFAULT_NAV) if (pages[id] && !pages[id].icon) pages[id].icon = DEFAULT_PAGES[id]?.icon;
+  for (const id of ids) if (pages[id] && !pages[id].icon) pages[id].icon = DEFAULT_PAGES[id]?.icon;
   return removed;
+}
+
+// v10: put the moved pages in the column, after the starting pages and
+// before any the grown-ups added. Returns null when nothing changes.
+function addV10Nav(settings, pages, version) {
+  if (version >= 10 || version < 5) return null;
+  const nav = [...(settings.nav || [])];
+  const add = NAV_V10.filter((id) => pages[id] && !nav.includes(id));
+  if (!add.length) return null;
+  let at = 0;
+  nav.forEach((id, i) => { if (DEFAULT_NAV.includes(id)) at = i + 1; });
+  nav.splice(at, 0, ...add);
+  return { ...settings, nav };
 }
 
 // v7: buttons became flat (no outline, slightly rounded). Boards still on the
@@ -547,9 +566,23 @@ function renderSidebar() {
 function sizeSidebar(rowH) {
   if (!state.settings.sidebar) return;
   const count = sidebar.children.length || 1;
+  // Every page stays on screen: a long column packs closer, and one too long
+  // for a single line of comfortable buttons splits into two side by side
+  // (Back across the top).
+  sidebar.classList.remove('crowded', 'two-col');
   const gap = parseFloat(getComputedStyle(sidebar).rowGap) || 10;
-  const fit = (sidebar.clientHeight - gap * (count - 1)) / count;
-  sidebar.style.setProperty('--nav-h', Math.floor(Math.max(58, Math.min(fit, rowH))) + 'px');
+  const height = sidebar.clientHeight;
+  const single = (height - gap * (count - 1)) / count;
+  let rows = count;
+  if (single < 52) {
+    sidebar.classList.add('two-col');
+    rows = 1 + Math.ceil((count - 1) / 2);
+  } else if (count > 9) {
+    sidebar.classList.add('crowded');
+  }
+  const g = parseFloat(getComputedStyle(sidebar).rowGap) || gap;
+  const fit = (height - g * (rows - 1)) / rows;
+  sidebar.style.setProperty('--nav-h', Math.floor(Math.max(44, Math.min(fit, rowH))) + 'px');
 }
 
 function setNav(nav, undoText) {
@@ -1241,7 +1274,7 @@ $('importFile').addEventListener('change', async (e) => {
     await photos.importAll(data.photos || {});
     upgradePages(data.pages, data.stateVersion || 1);
     const imported = upgradeLook((data.stateVersion || 1) < 5 ? upgradeSettingsToNav(data.settings || {}, data.pages) : data.settings || {}, data.stateVersion || 1);
-    replaceBoard(data.pages, { ...DEFAULT_SETTINGS, ...imported });
+    replaceBoard(data.pages, { ...DEFAULT_SETTINGS, ...(addV10Nav(imported, data.pages, data.stateVersion || 1) || imported) });
     markChanged();
     save();
     $('settings').close();
@@ -1345,12 +1378,14 @@ function applyPendingBoard(force = false) {
   const version = pendingBoard.stateVersion || STATE_VERSION;
   pendingBoard = null;
   const before = state.settings.skin;
-  upgradePages(board.pages, version);
+  const moved = upgradePages(board.pages, version);
   state.pages = board.pages;
-  state.deleted = board.deleted;
+  state.deleted = { ...board.deleted, ...Object.fromEntries(moved.map((id) => [id, now()])) };
   const keep = Object.fromEntries(sync.LOCAL_SETTINGS.map((k) => [k, state.settings[k]]));
-  state.settings = { ...DEFAULT_SETTINGS, ...upgradeLook(board.settings || {}, version), ...keep };
-  state.settingsAt = board.settingsAt;
+  const settings = upgradeLook(board.settings || {}, version);
+  const nav10 = addV10Nav(settings, board.pages, version);
+  state.settings = { ...DEFAULT_SETTINGS, ...(nav10 || settings), ...keep };
+  state.settingsAt = nav10 ? now() : board.settingsAt;
   save();
   if (!state.pages[pageId]) { pageId = HOME; trail = []; }
   render();

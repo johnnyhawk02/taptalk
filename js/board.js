@@ -18,7 +18,7 @@ const F = (label, sym, link) => [label, sym, 'folder', { link }];
 const S = { strip: true }; // shown in the core words strip on every page
 
 // Pages in the left-hand column (always visible), top to bottom.
-export const DEFAULT_NAV = ['food', 'drinks', 'play', 'feelings', 'people', 'places'];
+export const DEFAULT_NAV = ['food', 'drinks', 'play', 'feelings', 'people', 'places', 'describe', 'body', 'animals', 'colours'];
 
 export const DEFAULT_PAGES = {
   home: {
@@ -28,7 +28,6 @@ export const DEFAULT_PAGES = {
       ['you', 'a:2608', 'pron'], ['go', 'a:2432', 'verb'], ['like', 'a:2418', 'verb'], ["don't like", 'a:22005', 'neg', { say: "don't like" }], ['all done', 'a:28429', 'social', S],
       ['eat', 'a:2349', 'verb'], ['drink', 'a:2276', 'verb'], ['play', 'a:2439', 'verb'], ['toilet', 'a:2430', 'noun'], ['hurt', 'a:5484', 'desc'],
       ['yes', 'a:5584', 'social', S], ['no', 'a:5526', 'neg', S], ['wait', 'a:8109', 'verb'], F('Chat', 'a:3345', 'chat'), F('Actions', 'a:7297', 'actions'),
-      F('Describe', 'a:4658', 'describe'), F('Body', 'a:2728', 'body'), F('Animals', 'a:6901', 'animals'), F('Colours', 'a:5968', 'colours'),
     ],
   },
 
@@ -251,6 +250,7 @@ export const DEFAULT_PAGES = {
 
   describe: {
     name: 'Describe',
+    icon: 'a:4658',
     items: [
       ['big', 'a:4658', 'desc'], ['little', 'a:4571', 'desc'], ['more', 'a:5508', 'desc'],
       ['good', 'a:4581', 'desc'], ['bad', 'a:4690', 'desc'], ['same', 'a:4667', 'desc'],
@@ -265,6 +265,7 @@ export const DEFAULT_PAGES = {
 
   body: {
     name: 'Body',
+    icon: 'a:2728',
     items: [
       ['head', 'a:2673', 'noun'], ['eyes', 'a:2876', 'noun'], ['ears', 'a:2871', 'noun'],
       ['mouth', 'a:2663', 'noun'], ['teeth', 'a:2737', 'noun'], ['tummy', 'a:2786', 'noun'],
@@ -279,6 +280,7 @@ export const DEFAULT_PAGES = {
 
   animals: {
     name: 'Animals',
+    icon: 'a:6901',
     items: [
       ['dog', 'a:2517', 'noun'], ['cat', 'a:2406', 'noun'], ['horse', 'a:2294', 'noun'],
       ['cow', 'a:2609', 'noun'], ['pig', 'a:2327', 'noun'], ['sheep', 'a:2489', 'noun'],
@@ -291,6 +293,7 @@ export const DEFAULT_PAGES = {
 
   colours: {
     name: 'Colours',
+    icon: 'a:5968',
     items: [
       ['red', 'a:2808', 'desc'], ['blue', 'a:3355', 'desc'], ['green', 'a:4886', 'desc'],
       ['yellow', 'a:2648', 'desc'], ['pink', 'a:2807', 'desc'], ['purple', 'a:2907', 'desc'],

@@ -499,3 +499,17 @@ body.has-clip .undo-bar { bottom: calc(var(--safe-b) + 92px); }
 
 /* Dashed "add" buttons keep a visible edge even with outlines turned off */
 .tile.add-tile, .nav-add { border-width: max(3px, var(--btn-line, 4px)); }
+
+/* A long page column: tighter gaps, and the picture keeps a usable size */
+.sidebar.crowded { gap: 6px; }
+.sidebar.crowded .nav-btn { flex-direction: row; justify-content: flex-start; text-align: left; gap: 6px; padding: 4px 8px; border-radius: min(var(--btn-radius, 12px), 12px); font-size: clamp(13px, calc(var(--nav-h, 90px) * 0.3), 18px); }
+.sidebar.crowded .nav-btn img { width: min(48px, calc(var(--nav-h, 90px) - 10px)); height: min(48px, calc(var(--nav-h, 90px) - 10px)); }
+
+/* A very long page column: two narrow columns, picture above the word */
+.sidebar.two-col { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: var(--nav-h, 80px); gap: 6px; align-content: start; width: clamp(150px, 18vw, 230px); }
+.sidebar.two-col .nav-back { grid-column: 1 / -1; }
+.sidebar.two-col .nav-btn { flex-direction: column; justify-content: center; text-align: center; gap: 1px; padding: 3px; min-width: 0; font-size: clamp(12px, calc(var(--nav-h, 80px) * 0.16), 15px); border-radius: min(var(--btn-radius, 12px), 12px); }
+.sidebar.two-col .nav-btn img { width: 100%; height: calc(var(--nav-h, 80px) - 30px); }
+.sidebar.two-col .nav-btn span { max-width: 100%; }
+.sidebar.two-col .nav-back { flex-direction: row; }
+.sidebar.two-col .nav-remove { width: 24px; height: 24px; font-size: 18px; top: -5px; right: -5px; }
