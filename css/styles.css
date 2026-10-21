@@ -17,7 +17,7 @@
 
   --gap: 10px;
   --radius: 18px;
-  --bar-h: 104px;
+  --bar-h: 84px;
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
@@ -75,7 +75,7 @@ button { cursor: pointer; }
 
 .bar-btn {
   flex: none;
-  width: 84px;
+  width: 76px;
   border: 3px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -83,7 +83,7 @@ button { cursor: pointer; }
   place-items: center;
   padding: 0;
 }
-.bar-btn svg { width: 46px; height: 46px; fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
+.bar-btn svg { width: 40px; height: 40px; fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
 .bar-btn .x { stroke: var(--neg); stroke-width: 4.5; }
 .home-btn svg path { fill: var(--pron-bg); }
 .bar-btn:active { transform: scale(0.95); }
@@ -139,6 +139,9 @@ button { cursor: pointer; }
   flex: none;
 }
 .page-head h1 { margin: 0 4px; font-size: 22px; font-weight: 700; color: var(--muted); }
+/* With the page column on, it already shows which page is open, so the page
+   name row only appears while editing (it holds the editing bar). */
+body.with-sidebar:not(.editing) .page-head { display: none; }
 .edit-hint { white-space: nowrap; }
 @media (max-width: 1000px) { .edit-detail { display: none; } }
 .edit-banner { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 10px; background: var(--q-bg); border: 2px solid var(--q); padding: 4px 6px 4px 16px; border-radius: 22px; font-weight: 600; }
