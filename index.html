@@ -251,6 +251,7 @@
         <div class="ed-words">
           <label class="field">Word on button<input type="text" id="edLabel" required autocomplete="off" autocapitalize="none"></label>
           <label class="field">Say out loud (blank = say the word)<input type="text" id="edSay" autocomplete="off" autocapitalize="none"></label>
+          <label class="field" id="videoRow">Plays a YouTube video (paste its link)<input type="url" id="edVideo" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="https://youtu.be/…"></label>
 
           <div class="field">Colour
             <div class="type-picker" id="typePicker"></div>
@@ -341,6 +342,17 @@
       </header>
       <div class="nav-make"><button type="button" class="wide-btn primary" id="openPageMaker">✨ Make a new page from words</button></div>
       <div class="nav-list" id="navList"></div>
+    </div>
+  </dialog>
+
+  <!-- A video button's video -->
+  <dialog id="videoPlayer" class="sheet video-sheet">
+    <div class="sheet-inner">
+      <div class="video-frame" id="videoFrame"></div>
+      <div class="video-bar">
+        <a class="pill video-yt" id="videoOpenYT" target="_blank" rel="noopener">Not playing? Open in YouTube ↗</a>
+        <button type="button" class="video-close" id="videoClose">✕ Close</button>
+      </div>
     </div>
   </dialog>
 

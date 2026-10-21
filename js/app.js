@@ -426,6 +426,51 @@ function render() {
   if (!editing) warmPage();
 }
 
+// ---------- Video buttons ----------
+// A button can play a YouTube video (e.g. Mr Tumble): tapping it says the word
+// and opens the video full screen, with a big Close.
+
+// The video's id from any YouTube link (or an id on its own), else ''.
+function videoId(text) {
+  const t = (text || '').trim();
+  if (/^[\w-]{11}$/.test(t)) return t;
+  try {
+    const u = new URL(t);
+    const host = u.hostname.replace(/^(www|m|music)\./, '');
+    if (host === 'youtu.be') return /^[\w-]{11}$/.test(u.pathname.slice(1, 12)) ? u.pathname.slice(1, 12) : '';
+    if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+      const v = u.searchParams.get('v') || (u.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{11})/) || [])[1];
+      return v && /^[\w-]{11}$/.test(v) ? v : '';
+    }
+  } catch { /* not a link */ }
+  return '';
+}
+const videoUrl = (id) => 'https://youtu.be/' + id;
+
+function openVideo(id) {
+  const frame = $('videoFrame');
+  frame.replaceChildren();
+  $('videoOpenYT').href = videoUrl(id);
+  if (!navigator.onLine) {
+    frame.innerHTML = '<p class="video-msg">Videos need the internet.</p>';
+  } else {
+    const f = document.createElement('iframe');
+    f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+    f.title = 'Video';
+    f.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
+    f.allowFullscreen = true;
+    frame.append(f);
+  }
+  openSheet($('videoPlayer'));
+}
+
+function closeVideo() {
+  $('videoFrame').replaceChildren(); // stops the video
+  if ($('videoPlayer').open) $('videoPlayer').close();
+}
+$('videoClose').addEventListener('click', closeVideo);
+$('videoPlayer').addEventListener('close', () => $('videoFrame').replaceChildren());
+
 function tileFor(item) {
   const b = document.createElement('button');
   b.className = `tile t-${item.type}` + (item.type === 'folder' ? ' folder' : '') + (item.hidden ? ' hidden-item' : '');
@@ -437,6 +482,13 @@ function tileFor(item) {
   label.className = 'label';
   label.textContent = item.label;
   b.append(img, label);
+  if (item.video) {
+    const play = document.createElement('span');
+    play.className = 'play-badge';
+    play.setAttribute('aria-hidden', 'true');
+    b.append(play);
+    b.setAttribute('aria-label', `${item.label} (video)`);
+  }
   return b;
 }
 
@@ -940,6 +992,7 @@ function chooseItem(item, tile, { fromStrip = false } = {}) {
   sentence.push({ label: item.label, say: item.say || item.label, sym: item.sym, type: item.type });
   renderStrip();
   if (state.settings.speakOnTap) speak(item.say || item.label);
+  if (item.video) { openVideo(item.video); return; }
   // Place pages (School, Park…) stay open: you often want several words
   // there; core strip words never jump away from the page either.
   if (!fromStrip && state.settings.autoHome && pageId !== HOME && !state.pages[pageId].stay) goTo(HOME);
@@ -1465,6 +1518,8 @@ function openEditor(item, isNew = !item, onPage = pageId) {
   photoStatus('');
   $('edLabel').value = draft.label;
   $('edSay').value = draft.say;
+  $('edVideo').value = draft.video ? videoUrl(draft.video) : '';
+  $('videoRow').hidden = draft.type === 'folder';
   $('edHidden').checked = draft.hidden;
   $('edStrip').checked = Boolean(draft.strip);
   $('deleteBtn').hidden = draftIsNew;
@@ -1509,6 +1564,7 @@ function renderTypePicker() {
       renderTypePicker();
       renderPreview();
       $('folderRow').hidden = t !== 'folder';
+      $('videoRow').hidden = t === 'folder';
     });
     return b;
   }));
@@ -1948,6 +2004,15 @@ $('editorForm').addEventListener('submit', (e) => {
   draft.say = $('edSay').value.trim();
   draft.hidden = $('edHidden').checked;
   if (!draft.label) { e.preventDefault(); return; }
+  const link = $('edVideo').value.trim();
+  const vid = draft.type === 'folder' ? '' : videoId(link);
+  if (link && !vid && draft.type !== 'folder') {
+    e.preventDefault();
+    photoStatus("That doesn't look like a YouTube link. Copy it from YouTube's Share button.");
+    $('edVideo').focus();
+    return;
+  }
+  if (vid) draft.video = vid; else delete draft.video;
 
   if (draft.type === 'folder') {
     let link = $('edLink').value;
