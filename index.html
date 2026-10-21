@@ -165,33 +165,37 @@
       </header>
 
       <div class="editor-body">
-        <div class="editor-preview">
+        <!-- Left: the picture and ways to change it -->
+        <div class="ed-pic">
           <div class="tile preview-tile" id="previewTile"></div>
-          <div class="btn-col">
+          <div class="ed-pic-btns">
             <button type="button" class="wide-btn ghost" id="pickSymbol">Choose picture</button>
             <label class="wide-btn ghost file-btn">Take or pick photo<input type="file" id="photoFile" accept="image/*" hidden></label>
             <button type="button" class="wide-btn ghost" id="pastePhoto">Paste photo</button>
             <button type="button" class="wide-btn ghost" id="editPicture" hidden>Edit picture</button>
             <button type="button" class="wide-btn ghost" id="googlePhotos" hidden>From Google Photos</button>
           </div>
-        </div>
-        <div class="paste-box" id="pasteBox" contenteditable="true" inputmode="none" spellcheck="false" aria-label="Press and hold here, then tap Paste">Or <strong>press and hold here</strong>, then tap <strong>Paste</strong></div>
-        <p class="hint photo-status" id="photoStatus" role="status"></p>
-        <p class="hint">To copy a photo: in Google Photos tap <strong>Share → Copy</strong>; on a web page, press and hold the picture and tap <strong>Copy</strong> (not "Copy link"). You can also drag a photo onto this window.</p>
-
-        <label class="field">Word on button<input type="text" id="edLabel" required autocomplete="off" autocapitalize="none"></label>
-        <label class="field">Say out loud (leave blank to say the word)<input type="text" id="edSay" autocomplete="off" autocapitalize="none"></label>
-
-        <div class="field">Colour
-          <div class="type-picker" id="typePicker"></div>
+          <div class="paste-box" id="pasteBox" contenteditable="true" inputmode="none" spellcheck="false" aria-label="Press and hold here, then tap Paste">Or <strong>press and hold here</strong>, then tap <strong>Paste</strong></div>
+          <p class="hint photo-status" id="photoStatus" role="status"></p>
+          <p class="hint ed-tip">Copy a photo first: Google Photos <strong>Share → Copy</strong>, or hold a picture on a web page → <strong>Copy</strong>.</p>
         </div>
 
-        <label class="row" id="folderRow">Opens a page <select id="edLink"></select></label>
-        <label class="row">Hide this button from the child <input type="checkbox" id="edHidden"></label>
+        <!-- Right: the words and options -->
+        <div class="ed-words">
+          <label class="field">Word on button<input type="text" id="edLabel" required autocomplete="off" autocapitalize="none"></label>
+          <label class="field">Say out loud (blank = say the word)<input type="text" id="edSay" autocomplete="off" autocapitalize="none"></label>
 
-        <div class="btn-row" id="moveRow">
-          <button type="button" class="wide-btn ghost" id="moveBack">◀ Move earlier</button>
-          <button type="button" class="wide-btn ghost" id="moveFwd">Move later ▶</button>
+          <div class="field">Colour
+            <div class="type-picker" id="typePicker"></div>
+          </div>
+
+          <label class="row" id="folderRow">Opens a page <select id="edLink"></select></label>
+          <label class="row">Hide from Robyn <input type="checkbox" id="edHidden"></label>
+
+          <div class="btn-row" id="moveRow">
+            <button type="button" class="wide-btn ghost" id="moveBack">◀ Move earlier</button>
+            <button type="button" class="wide-btn ghost" id="moveFwd">Move later ▶</button>
+          </div>
         </div>
       </div>
 
