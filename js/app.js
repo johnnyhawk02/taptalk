@@ -37,6 +37,8 @@ const DEFAULT_SETTINGS = {
   rate: 0.9,
   pitch: 1.1,
   skin: DEFAULT_SKIN,
+  corners: 18,      // button corner radius, px
+  outline: 4,       // button outline thickness, px
 };
 
 const $ = (id) => document.getElementById(id);
@@ -340,6 +342,8 @@ const grid = $('grid');
 function render() {
   const page = state.pages[pageId] || state.pages[HOME];
   document.documentElement.classList.toggle('no-labels', !state.settings.labels);
+  document.documentElement.style.setProperty('--btn-radius', state.settings.corners + 'px');
+  document.documentElement.style.setProperty('--btn-line', state.settings.outline + 'px');
   document.documentElement.classList.toggle('compact', isCompact());
   document.body.classList.toggle('editing', editing);
   $('editBanner').hidden = !editing;
@@ -892,6 +896,8 @@ function openSettings() {
   $('setCols').value = String(s.cols);
   $('setRows').value = String(s.rows || 5);
   $('setSidebar').checked = s.sidebar;
+  $('setCorners').value = String(s.corners);
+  $('setOutline').value = String(s.outline);
   $('aiKey').value = ai.key();
   $('aiQuality').value = s.aiQuality || 'low';
   $('aiPrompt').value = s.aiPrompt || ai.DEFAULT_PROMPT;
@@ -1018,6 +1024,8 @@ function bindSetting(id, key, read) {
 bindSetting('setCols', 'cols', (el) => Number(el.value));
 bindSetting('setRows', 'rows', (el) => Number(el.value));
 bindSetting('setSidebar', 'sidebar', (el) => el.checked);
+bindSetting('setCorners', 'corners', (el) => Number(el.value));
+bindSetting('setOutline', 'outline', (el) => Number(el.value));
 bindSetting('setCoreStrip', 'coreStrip', (el) => el.checked);
 bindSetting('setLabels', 'labels', (el) => el.checked);
 bindSetting('setAutoHome', 'autoHome', (el) => el.checked);
