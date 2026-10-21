@@ -1,13 +1,15 @@
-// Send the board from the editing computer to the tablet, through a private
-// GitHub repository.
+// Shares Robyn's board between devices through a private GitHub repository.
 //
 //   board.json        pages + settings (+ which photo file is which)
 //   photos/<id>.<ext> each caregiver photo, uploaded once
 //
-// The computer needs a token that can write the repo's contents; the tablet
-// only needs one that can read them. Tokens stay in this device's storage.
+// Boards are merged, never simply replaced (see merge.js), so the computer's
+// edits and the school iPad's edits are both kept. A device that sends needs
+// a token that can write the repo's contents; a device that only receives
+// needs one that can read them. Tokens stay in this device's storage.
 
 import * as photos from './photos.js';
+import { merge, fingerprint } from './merge.js';
 import { SYNC_REPO } from './config.js';
 
 const KEY = 'taptalk.sync';
@@ -67,59 +69,82 @@ function photoIds(pages) {
   return ids;
 }
 
-/** Computer: upload new photos, then the board. `progress(text)` reports steps. */
-export async function send({ pages, settings, stateVersion }, progress = () => {}) {
-  progress('Checking what the tablet already has…');
-  const remote = await gh('photos');
-  const have = new Set((remote || []).map((f) => f.name.replace(/\.[^.]+$/, '')));
+/**
+ * Fetch the shared board, merge it with this device's, store any new photos,
+ * and (if `upload`) send the merged board back. Returns
+ * { board, changedHere, sent } where `board` is the merged board to use here.
+ */
+export async function exchange(local, { upload = false, progress = () => {} } = {}, retry = true) {
+  progress('Getting the latest board…');
+  const res = await gh('board.json', { raw: true });
+  const remote = res ? await res.json() : null;
+  if (remote && (remote.app !== 'taptalk' || !remote.pages?.home)) throw new Error('board.json is not a TapTalk board.');
 
-  const files = {};
-  const ids = [...photoIds(pages)];
+  // First link: start from one board rather than merging two unrelated ones
+  // (their buttons wouldn't match up). The editing computer's board becomes
+  // the shared one; an iPad takes the shared board. After that, always merge.
+  const { mode, linked } = config();
+  const own = { pages: local.pages, deleted: local.deleted || {}, settings: local.settings, settingsAt: local.settingsAt || 0 };
+  let merged;
+  const adopted = Boolean(remote && !linked && mode !== 'send');
+  if (!remote || (!linked && mode === 'send')) merged = own;
+  else if (!linked) merged = { pages: remote.pages, deleted: remote.deleted || {}, settings: { ...local.settings, ...remote.settings }, settingsAt: remote.settingsAt || 0 };
+  else merged = merge(local, remote);
+  const files = { ...(remote?.photos || {}) };
+
+  // Photos the merged board uses that this device doesn't have yet.
+  for (const id of photoIds(merged.pages)) {
+    if (!files[id] || (await photos.get(id))) continue;
+    const pic = await gh('photos/' + files[id], { raw: true });
+    if (!pic) continue;
+    const type = TYPE[files[id].split('.').pop()] || 'image/jpeg';
+    await photos.put(id, new Blob([await pic.arrayBuffer()], { type }));
+  }
+
+  const changedHere = fingerprint(merged) !== fingerprint(local);
+  const remoteSame = remote && fingerprint(merged) === fingerprint({ ...remote, settings: { ...merged.settings, ...remote.settings } })
+    && [...photoIds(merged.pages)].every((id) => files[id]);
+  if (!upload || remoteSame) {
+    // The computer only counts as linked once it has sent its board (when the
+    // grown-up presses Send); an iPad is linked once it has taken the board.
+    if (remote) setConfig({ lastReceived: remote.updated, linked: linked || mode !== 'send' });
+    return { board: merged, changedHere, sent: false, adopted };
+  }
+
+  // Upload photos the shared board doesn't have yet, then the board.
+  const have = new Set(((await gh('photos')) || []).map((f) => f.name.replace(/\.[^.]+$/, '')));
   let n = 0;
-  for (const id of ids) {
+  for (const id of photoIds(merged.pages)) {
     const blob = await photos.get(id);
-    if (!blob) continue; // a photo that was lost on this device; the button keeps its word
-    const ext = EXT[blob.type] || 'jpg';
-    files[id] = `${id}.${ext}`;
+    if (!blob) continue; // lost on this device; the button keeps its word
+    files[id] ||= `${id}.${EXT[blob.type] || 'jpg'}`;
     if (have.has(id)) continue;
     progress(`Sending photo ${++n}…`);
-    await gh('photos/' + files[id], {
-      method: 'PUT',
-      body: { message: 'TapTalk: add photo', content: await blobToBase64(blob) },
-    });
+    await gh('photos/' + files[id], { method: 'PUT', body: { message: 'TapTalk: add photo', content: await blobToBase64(blob) } });
   }
 
   progress('Sending the board…');
-  const shared = Object.fromEntries(Object.entries(settings).filter(([k]) => !LOCAL_SETTINGS.includes(k)));
-  const board = { app: 'taptalk', kind: 'shared-board', stateVersion, updated: new Date().toISOString(), pages, settings: shared, photos: files };
-  const existing = await gh('board.json');
-  await gh('board.json', {
-    method: 'PUT',
-    body: { message: 'TapTalk: update board', content: await textToBase64(JSON.stringify(board)), ...(existing && { sha: existing.sha }) },
-  });
-  setConfig({ lastSent: board.updated });
-  return board.updated;
-}
-
-/**
- * Tablet: fetch the board if it changed since last time. Returns
- * { board } with photos already stored locally, or null if nothing new.
- */
-export async function fetchUpdate() {
-  const res = await gh('board.json', { raw: true });
-  if (!res) return null;
-  const board = await res.json();
-  if (board.app !== 'taptalk' || !board.pages?.home) throw new Error('board.json is not a TapTalk board.');
-  if (board.updated === config().lastReceived) return null;
-
-  for (const [id, file] of Object.entries(board.photos || {})) {
-    if (await photos.get(id)) continue;
-    const pic = await gh('photos/' + file, { raw: true });
-    if (!pic) continue;
-    const type = TYPE[file.split('.').pop()] || 'image/jpeg';
-    await photos.put(id, new Blob([await pic.arrayBuffer()], { type }));
+  const shared = Object.fromEntries(Object.entries(merged.settings).filter(([k]) => !LOCAL_SETTINGS.includes(k)));
+  const board = {
+    app: 'taptalk', kind: 'shared-board', stateVersion: local.stateVersion, updated: new Date().toISOString(),
+    pages: merged.pages, deleted: merged.deleted, settings: shared, settingsAt: merged.settingsAt, photos: files,
+  };
+  const meta = await gh('board.json');
+  try {
+    await gh('board.json', {
+      method: 'PUT',
+      body: { message: 'TapTalk: update board', content: await textToBase64(JSON.stringify(board)), ...(meta && { sha: meta.sha }) },
+    });
+  } catch (err) {
+    // Another device saved in the meantime: merge with theirs and try again.
+    if (retry && /409|422/.test(err.message)) {
+      setConfig({ linked: true });
+      return exchange({ ...local, ...merged }, { upload, progress }, false);
+    }
+    throw err;
   }
-  return { board };
+  setConfig({ lastSent: board.updated, lastReceived: board.updated, linked: true });
+  return { board: merged, changedHere, sent: true, adopted };
 }
 
 export function markReceived(updated) {

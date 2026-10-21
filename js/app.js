@@ -5,6 +5,7 @@ import { TO_ARASAAC } from './migrate.js';
 import * as sync from './sync.js';
 import { editPicture, initCropper } from './cropper.js';
 import { openSheet } from './sheet.js';
+import { merge, fingerprint } from './merge.js';
 
 const STORE_KEY = 'taptalk.v1';
 const STATE_VERSION = 4; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page
@@ -43,8 +44,9 @@ function buildDefaultPages() {
     pages[pageId] = {
       name: page.name,
       ...(page.stay && { stay: true }),
-      items: page.items.map(([label, sym, type, extra = {}]) => ({
-        id: uid(), label, sym, type, say: extra.say || '', link: extra.link || '', hidden: false,
+      // Stable ids, so the starting board is the same on every device.
+      items: page.items.map(([label, sym, type, extra = {}], i) => ({
+        id: `d-${pageId}-${i}`, label, sym, type, say: extra.say || '', link: extra.link || '', hidden: false,
       })),
     };
   }
@@ -56,10 +58,40 @@ function loadState() {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY));
     if (raw && raw.pages && raw.pages[HOME]) {
       upgradePages(raw.pages, raw.version || 1);
-      return { pages: raw.pages, settings: { ...DEFAULT_SETTINGS, ...raw.settings }, upgraded: (raw.version || 1) < STATE_VERSION };
+      return {
+        pages: raw.pages,
+        settings: { ...DEFAULT_SETTINGS, ...raw.settings },
+        deleted: raw.deleted || {},
+        settingsAt: raw.settingsAt || 0,
+        upgraded: (raw.version || 1) < STATE_VERSION,
+      };
     }
   } catch { /* fall through to defaults */ }
-  return { pages: buildDefaultPages(), settings: { ...DEFAULT_SETTINGS } };
+  return { pages: buildDefaultPages(), settings: { ...DEFAULT_SETTINGS }, deleted: {}, settingsAt: 0 };
+}
+
+// Edit times let two devices' boards be merged (see merge.js).
+const now = () => Date.now();
+const touchSettings = () => { state.settingsAt = now(); };
+
+// Replace the whole board (reset / load backup) in a way that also wins when
+// merged with other devices: old buttons and pages become deletions, and
+// everything new counts as just edited.
+function replaceBoard(pages, settings) {
+  const at = now();
+  const keep = new Set(Object.values(pages).flatMap((p) => p.items.map((it) => it.id)));
+  for (const [id, page] of Object.entries(state.pages)) {
+    if (!pages[id]) state.deleted['page:' + id] = at;
+    for (const it of page.items) if (!keep.has(it.id)) state.deleted[it.id] = at;
+  }
+  for (const page of Object.values(pages)) {
+    page.updatedAt = at;
+    page.orderAt = at;
+    for (const it of page.items) it.updatedAt = at;
+  }
+  state.pages = pages;
+  state.settings = settings;
+  state.settingsAt = at;
 }
 
 // Older boards (and backups) used Mulberry pictures. Swap the ones nobody has
@@ -98,7 +130,9 @@ let lastTap = 0;
 
 function save() {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ version: STATE_VERSION, pages: state.pages, settings: state.settings }));
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      version: STATE_VERSION, pages: state.pages, settings: state.settings, deleted: state.deleted, settingsAt: state.settingsAt,
+    }));
   } catch (err) {
     alert('Could not save changes: ' + err.message);
   }
@@ -237,7 +271,8 @@ function render() {
   $('editToggle').setAttribute('aria-pressed', String(editing));
   $('editToggleText').textContent = editing ? 'Done' : 'Edit';
   $('editHint').textContent = syncMode === 'receive'
-    ? 'Editing — changes made here are replaced by the next update from the computer'
+    ? 'Editing — changes made here stay on this iPad only'
+    : syncMode === 'both' ? 'Editing — your changes are shared when you tap Done'
     : syncMode === 'send' ? 'Editing — click a button to change it · press E when done'
     : 'Editing — tap a button to change it';
   $('pageTitle').textContent = page.name;
@@ -462,13 +497,18 @@ function renderSwatches() {
     b.style.background = tone;
     b.setAttribute('aria-label', 'Skin colour');
     b.setAttribute('aria-pressed', String(tone === state.settings.skin));
-    b.addEventListener('click', () => { state.settings.skin = tone; save(); renderSwatches(); render(); renderStrip(); prefetchToned(); });
+    b.addEventListener('click', () => { state.settings.skin = tone; touchSettings(); markChanged(); save(); renderSwatches(); render(); renderStrip(); prefetchToned(); });
     return b;
   }));
 }
 
 function bindSetting(id, key, read) {
-  $(id).addEventListener('change', (e) => { state.settings[key] = read(e.target); save(); render(); });
+  $(id).addEventListener('change', (e) => {
+    state.settings[key] = read(e.target);
+    if (!sync.LOCAL_SETTINGS.includes(key)) { touchSettings(); markChanged(); }
+    save();
+    render();
+  });
 }
 bindSetting('setCols', 'cols', (el) => Number(el.value));
 bindSetting('setLabels', 'labels', (el) => el.checked);
@@ -487,7 +527,7 @@ function setEditing(on) {
   editing = on;
   try { sessionStorage.setItem(EDIT_KEY, on ? '1' : ''); } catch { /* not important */ }
   render();
-  if (!on) applyPendingBoard();
+  if (!on) { applyPendingBoard(); shareIfUnsent(); }
 }
 
 $('startEditing').addEventListener('click', () => { $('settings').close(); setEditing(true); });
@@ -509,9 +549,9 @@ document.addEventListener('keydown', (e) => {
 
 $('resetBtn').addEventListener('click', async () => {
   if (!confirm('Reset to the starting board? Your changes and photos will be removed.')) return;
-  state.pages = buildDefaultPages();
-  state.settings = { ...DEFAULT_SETTINGS };
+  replaceBoard(buildDefaultPages(), { ...DEFAULT_SETTINGS, voice: state.settings.voice });
   await photos.clear();
+  markChanged();
   save();
   sentence = [];
   renderStrip();
@@ -522,7 +562,7 @@ $('resetBtn').addEventListener('click', async () => {
 $('exportBtn').addEventListener('click', async () => {
   const data = {
     app: 'taptalk', version: 1, stateVersion: STATE_VERSION, saved: new Date().toISOString(),
-    pages: state.pages, settings: state.settings, photos: await photos.exportAll(),
+    pages: state.pages, settings: state.settings, deleted: state.deleted, settingsAt: state.settingsAt, photos: await photos.exportAll(),
   };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const name = `taptalk-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -549,8 +589,8 @@ $('importFile').addEventListener('change', async (e) => {
     await photos.clear();
     await photos.importAll(data.photos || {});
     upgradePages(data.pages, data.stateVersion || 1);
-    state.pages = data.pages;
-    state.settings = { ...DEFAULT_SETTINGS, ...data.settings };
+    replaceBoard(data.pages, { ...DEFAULT_SETTINGS, ...data.settings });
+    markChanged();
     save();
     $('settings').close();
     goTo(HOME);
@@ -559,10 +599,21 @@ $('importFile').addEventListener('change', async (e) => {
   }
 });
 
-// ---------- Computer → tablet sync ----------
+// ---------- Sharing the board between devices ----------
+//
+// Modes: 'send' = the editing computer (sends with the button),
+// 'both' = the school iPad (gets changes, and sends its own edits when a
+// grown-up taps Done), 'receive' = gets changes only. All merge (merge.js).
 
 const syncStatus = (text) => { $('syncStatus').textContent = text; };
 const when = (iso) => (iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'never');
+const linked = () => { const c = sync.config(); return c.mode !== 'off' && c.token ? c : null; };
+
+// Called after every board edit: remember there's something to share.
+function markChanged() {
+  const m = sync.config().mode;
+  if (m === 'send' || m === 'both') sync.setConfig({ unsent: true });
+}
 
 function fillSyncFields() {
   const c = sync.config();
@@ -570,94 +621,118 @@ function fillSyncFields() {
   $('syncRepo').value = c.repo;
   $('syncToken').value = c.token;
   $('syncFields').hidden = c.mode === 'off';
-  $('syncSend').hidden = c.mode !== 'send';
-  $('syncCheck').hidden = c.mode !== 'receive';
-  $('syncAutoRow').hidden = c.mode !== 'receive';
+  $('syncSend').hidden = c.mode !== 'send' && c.mode !== 'both';
+  $('syncSend').textContent = c.mode === 'both' ? 'Send this iPad\'s changes now' : 'Send board to tablet';
+  $('syncCheck').hidden = c.mode === 'off';
+  $('syncAutoRow').hidden = c.mode === 'off';
   $('syncAuto').checked = c.auto;
-  syncStatus(c.mode === 'send' ? 'Last sent: ' + when(c.lastSent)
-    : c.mode === 'receive' ? 'Last updated: ' + when(c.lastReceived) : '');
+  const unsent = c.unsent && c.mode !== 'receive' ? ' · changes not sent yet' : '';
+  syncStatus(c.mode === 'off' ? '' : `Last sent: ${when(c.lastSent)} · Last updated: ${when(c.lastReceived)}${unsent}`);
 }
 
 $('syncMode').addEventListener('change', (e) => {
-  sync.setConfig({ mode: e.target.value });
+  sync.setConfig({ mode: e.target.value, linked: false });
   fillSyncFields();
   render();
-  if (e.target.value === 'receive') checkForBoard(true);
+  if (e.target.value !== 'off') syncBoard({ manual: true });
 });
 $('syncRepo').addEventListener('change', (e) => sync.setConfig({ repo: e.target.value.trim() }));
-$('syncToken').addEventListener('change', (e) => sync.setConfig({ token: e.target.value.trim() }));
-
-async function sendBoard(report = syncStatus) {
-  try {
-    const sent = await sync.send({ pages: state.pages, settings: state.settings, stateVersion: STATE_VERSION }, report);
-    report('Sent ' + when(sent) + '. The tablet will update next time it checks (when TapTalk is opened, or within 5 minutes).');
-  } catch (err) {
-    report('Could not send: ' + err.message);
-  }
-}
-
-$('syncSend').addEventListener('click', () => sendBoard());
-$('sendFromBanner').addEventListener('click', async () => {
-  const btn = $('sendFromBanner');
-  btn.disabled = true;
-  await sendBoard((text) => { btn.textContent = text.length > 40 ? 'Sending…' : text; });
-  btn.textContent = sync.config().lastSent ? 'Sent ✓' : 'Send to tablet';
-  btn.disabled = false;
-  setTimeout(() => { btn.textContent = 'Send to tablet'; }, 4000);
-});
-$('syncCheck').addEventListener('click', () => checkForBoard(true));
-// Manual: the tablet's board only changes when a grown-up taps "Check for updates now".
-$('syncAuto').addEventListener('change', (e) => {
-  sync.setConfig({ auto: e.target.checked });
-  syncStatus(e.target.checked
-    ? 'New boards from the computer will arrive by themselves.'
-    : 'The board will only change when you tap Check for updates now.');
-  if (e.target.checked) checkForBoard(true);
-});
+$('syncToken').addEventListener('change', (e) => sync.setConfig({ token: e.target.value.trim(), linked: false }));
 
 let pendingBoard = null;
-let checking = false;
+let syncing = false;
 
 // Only swap the board when Robyn isn't in the middle of something.
 function safeToSwap() {
   return !editing && sentence.length === 0 && !document.querySelector('dialog[open]');
 }
 
-async function checkForBoard(manual = false) {
-  const c = sync.config();
-  if (c.mode !== 'receive' || !c.token || checking || !navigator.onLine) return;
-  if (!manual && !c.auto) return; // manual updates only
-  checking = true;
+const localBoard = () => ({ pages: state.pages, deleted: state.deleted, settings: state.settings, settingsAt: state.settingsAt, stateVersion: STATE_VERSION });
+
+// Get the shared board, merge it in, and (if upload) send the result back.
+async function syncBoard({ upload = false, manual = false, report = syncStatus } = {}) {
+  const c = linked();
+  if (!c || syncing || !navigator.onLine) {
+    if (manual && !c) report('Add the GitHub token first.');
+    return;
+  }
+  if (!manual && !upload && !c.auto) return; // manual updates only
+  syncing = true;
   try {
-    if (manual) syncStatus('Checking…');
-    const update = await sync.fetchUpdate();
-    if (update) { pendingBoard = update.board; applyPendingBoard(manual); }
-    else if (manual) syncStatus('Already up to date. Last updated: ' + when(c.lastReceived));
+    if (manual) report(upload ? 'Sending…' : 'Checking…');
+    const { board, changedHere, sent, adopted } = await sync.exchange(localBoard(), { upload, progress: manual ? report : () => {} });
+    if (sent || upload) sync.setConfig({ unsent: false });
+    if (changedHere) { pendingBoard = { ...board, adopt: adopted }; applyPendingBoard(manual || upload); }
+    if (manual) {
+      report(sent ? 'Sent ' + when(sync.config().lastSent) + '.'
+        : changedHere ? 'Updated with the latest changes.' : 'Already up to date.');
+    }
   } catch (err) {
-    if (manual) syncStatus('Could not check: ' + err.message);
+    if (manual) report((upload ? 'Could not send: ' : 'Could not check: ') + err.message);
   } finally {
-    checking = false;
+    syncing = false;
   }
 }
 
 function applyPendingBoard(force = false) {
   if (!pendingBoard) return;
   if (!force && !safeToSwap()) { setTimeout(applyPendingBoard, 20_000); return; }
-  const board = pendingBoard;
+  // Merge again with the board as it is now, so nothing edited in the
+  // meantime is lost (except on first link, when this device takes the
+  // shared board as it is).
+  const board = pendingBoard.adopt ? pendingBoard : merge(localBoard(), pendingBoard);
+  const version = pendingBoard.stateVersion || STATE_VERSION;
   pendingBoard = null;
   const before = state.settings.skin;
-  upgradePages(board.pages, board.stateVersion || 1);
+  upgradePages(board.pages, version);
   state.pages = board.pages;
+  state.deleted = board.deleted;
   const keep = Object.fromEntries(sync.LOCAL_SETTINGS.map((k) => [k, state.settings[k]]));
   state.settings = { ...DEFAULT_SETTINGS, ...board.settings, ...keep };
+  state.settingsAt = board.settingsAt;
   save();
-  sync.markReceived(board.updated);
   if (!state.pages[pageId]) { pageId = HOME; trail = []; }
   render();
   renderStrip();
   if (state.settings.skin !== before) prefetchToned();
   if ($('settings').open) fillSyncFields();
 }
+
+// The school iPad shares its edits when a grown-up finishes editing, and keeps
+// trying (e.g. after being offline) until they've gone.
+function shareIfUnsent() {
+  const c = linked();
+  if (c?.mode === 'both' && c.unsent && !editing) syncBoard({ upload: true });
+}
+// Regular check: share anything waiting, otherwise look for changes.
+function syncTick() {
+  const c = linked();
+  if (c?.mode === 'both' && c.unsent && !editing) shareIfUnsent();
+  else syncBoard();
+}
+window.addEventListener('online', syncTick);
+
+$('syncSend').addEventListener('click', () => syncBoard({ upload: true, manual: true }));
+$('sendFromBanner').addEventListener('click', async () => {
+  const btn = $('sendFromBanner');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  let last = '';
+  await syncBoard({ upload: true, manual: true, report: (t) => { last = t; } });
+  btn.textContent = last.startsWith('Sent') ? 'Sent ✓' : 'Not sent';
+  btn.title = last;
+  btn.disabled = false;
+  setTimeout(() => { btn.textContent = 'Send to tablet'; }, 4000);
+});
+$('syncCheck').addEventListener('click', () => syncBoard({ manual: true }));
+// Manual: the board only changes when a grown-up taps "Check for changes now".
+$('syncAuto').addEventListener('change', (e) => {
+  sync.setConfig({ auto: e.target.checked });
+  syncStatus(e.target.checked
+    ? 'Changes will arrive by themselves.'
+    : 'The board will only change when you tap Check for changes now.');
+  if (e.target.checked) syncBoard({ manual: true });
+});
 
 // ---------- Button editor ----------
 
@@ -909,6 +984,8 @@ function moveItem(dir) {
   const j = i + dir;
   if (i < 0 || j < 0 || j >= items.length) return;
   [items[i], items[j]] = [items[j], items[i]];
+  state.pages[pageId].orderAt = now();
+  markChanged();
   save();
   render();
 }
@@ -917,6 +994,8 @@ $('deleteBtn').addEventListener('click', () => {
   if (!confirm(`Delete "${draft.label}"? Tip: you can hide it instead.`)) return;
   const page = state.pages[pageId];
   page.items = page.items.filter((it) => it.id !== draft.id);
+  state.deleted[draft.id] = now();
+  markChanged();
   save();
   $('editor').close();
   render();
@@ -933,16 +1012,18 @@ $('editorForm').addEventListener('submit', (e) => {
     let link = $('edLink').value;
     if (link === '__new' || !state.pages[link]) {
       link = 'p' + uid();
-      state.pages[link] = { name: draft.label, items: [] };
+      state.pages[link] = { name: draft.label, items: [], updatedAt: now() };
     }
     draft.link = link;
   } else {
     draft.link = '';
   }
 
+  draft.updatedAt = now();
   const items = state.pages[pageId].items;
   const i = items.findIndex((it) => it.id === draft.id);
   if (i >= 0) items[i] = draft; else items.push(draft);
+  markChanged();
   save();
   render();
 });
@@ -1197,9 +1278,9 @@ try { if (sync.config().mode === 'send' && sessionStorage.getItem(EDIT_KEY)) edi
 render();
 renderStrip();
 
-checkForBoard();
-setInterval(checkForBoard, 5 * 60_000);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForBoard(); });
+syncTick();
+setInterval(syncTick, 5 * 60_000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncTick(); });
 
 // Back from Google sign-in: reopen the editor where we left it and carry on.
 const back = gphotos.takeResume();
