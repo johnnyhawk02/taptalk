@@ -17,7 +17,7 @@ const API = 'https://api.github.com/repos/';
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg' };
 const TYPE = Object.fromEntries(Object.entries(EXT).map(([t, e]) => [e, t]));
 // Settings that belong to a device rather than to Robyn's board.
-const LOCAL_SETTINGS = ['voice'];
+const LOCAL_SETTINGS = ['voice', 'activeSet'];
 
 export function config() {
   let c = {};

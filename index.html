@@ -52,6 +52,7 @@
     <div class="page-head" id="pageHead">
       <div class="edit-banner" id="editBanner" hidden>
         <span class="edit-hint"><b>Editing</b><span class="edit-detail"> — <span id="editDetail">tap a button to change it</span></span></span>
+        <button class="pill" id="pagesFromBanner" aria-label="Pages and page sets">📄 <span id="bannerSet">Pages</span></button>
         <button class="pill" id="settingsFromBanner" aria-label="Settings">⚙ Settings</button>
         <button class="pill" id="compactToggle" hidden>Full-size view</button>
         <button class="pill" id="sendFromBanner" hidden>Send to tablet</button>
@@ -342,6 +343,21 @@
       </header>
       <div class="nav-make"><button type="button" class="wide-btn primary" id="openPageMaker">✨ Make a new page from words</button></div>
       <div class="nav-list" id="navList"></div>
+    </div>
+  </dialog>
+
+  <!-- Page manager: page sets for the left-hand column, and every page -->
+  <dialog id="pageManager" class="sheet tall">
+    <div class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Pages</h2>
+        <button type="button" class="pill" id="pmClose">Close</button>
+      </header>
+      <div class="tabs" role="tablist" aria-label="Pages">
+        <button type="button" class="tab" role="tab" data-pm="sets">Page sets</button>
+        <button type="button" class="tab" role="tab" data-pm="library">All pages</button>
+      </div>
+      <div class="pm-body" id="pmBody"></div>
     </div>
   </dialog>
 
