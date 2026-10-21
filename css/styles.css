@@ -139,9 +139,19 @@ button { cursor: pointer; }
   flex: none;
 }
 .page-head h1 { margin: 0 4px; font-size: 22px; font-weight: 700; color: var(--muted); }
-/* With the page column on, it already shows which page is open, so the page
-   name row only appears while editing (it holds the editing bar). */
-body.with-sidebar:not(.editing) .page-head { display: none; }
+/* The page name is in the title bar at the top, so this row only appears
+   while editing (it holds the editing bar). */
+body:not(.editing) .page-head { display: none; }
+.page-head { justify-content: flex-end; }
+
+/* Page name across the top, like TD Snap */
+.title-bar {
+  margin: -4px 0 -2px; height: 26px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 750; color: var(--ink); letter-spacing: 0.01em;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.compact .title-bar { height: 22px; font-size: 15px; }
 .edit-hint { white-space: nowrap; }
 @media (max-width: 1000px) { .edit-detail { display: none; } }
 .edit-banner { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 10px; background: var(--q-bg); border: 2px solid var(--q); padding: 4px 6px 4px 16px; border-radius: 22px; font-weight: 600; }
