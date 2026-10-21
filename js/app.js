@@ -572,6 +572,8 @@ function fillSyncFields() {
   $('syncFields').hidden = c.mode === 'off';
   $('syncSend').hidden = c.mode !== 'send';
   $('syncCheck').hidden = c.mode !== 'receive';
+  $('syncAutoRow').hidden = c.mode !== 'receive';
+  $('syncAuto').checked = c.auto;
   syncStatus(c.mode === 'send' ? 'Last sent: ' + when(c.lastSent)
     : c.mode === 'receive' ? 'Last updated: ' + when(c.lastReceived) : '');
 }
@@ -604,6 +606,14 @@ $('sendFromBanner').addEventListener('click', async () => {
   setTimeout(() => { btn.textContent = 'Send to tablet'; }, 4000);
 });
 $('syncCheck').addEventListener('click', () => checkForBoard(true));
+// Manual: the tablet's board only changes when a grown-up taps "Check for updates now".
+$('syncAuto').addEventListener('change', (e) => {
+  sync.setConfig({ auto: e.target.checked });
+  syncStatus(e.target.checked
+    ? 'New boards from the computer will arrive by themselves.'
+    : 'The board will only change when you tap Check for updates now.');
+  if (e.target.checked) checkForBoard(true);
+});
 
 let pendingBoard = null;
 let checking = false;
@@ -616,6 +626,7 @@ function safeToSwap() {
 async function checkForBoard(manual = false) {
   const c = sync.config();
   if (c.mode !== 'receive' || !c.token || checking || !navigator.onLine) return;
+  if (!manual && !c.auto) return; // manual updates only
   checking = true;
   try {
     if (manual) syncStatus('Checking…');

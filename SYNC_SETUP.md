@@ -50,6 +50,8 @@ On Robyn's tablet, in TapTalk's grown-up settings:
 2. Press **Send to tablet**. It's in the purple editing bar, and in the grown-up settings too.
 3. The tablet updates the next time TapTalk is opened, or within 5 minutes. To update it right away: grown-up settings → **Check for updates now**.
 
+   Prefer to choose when the board changes (say, not during the school day)? On the tablet, untick **Get new boards automatically** in grown-up settings. The board then only changes when you tap **Check for updates now**.
+
 Good to know:
 - **The computer's board is the master.** Anything changed directly on the tablet is replaced by the next send. (The tablet's edit bar says so.)
 - **The voice stays per device**, because the tablet and computer have different voices. Everything else is sent: buttons, pages, photos, and settings like buttons-per-row and skin colour.

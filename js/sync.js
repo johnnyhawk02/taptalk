@@ -20,7 +20,7 @@ const LOCAL_SETTINGS = ['voice'];
 export function config() {
   let c = {};
   try { c = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { /* use defaults */ }
-  return { mode: 'off', repo: SYNC_REPO, token: '', lastSent: '', lastReceived: '', ...c };
+  return { mode: 'off', repo: SYNC_REPO, token: '', lastSent: '', lastReceived: '', auto: true, ...c };
 }
 
 export function setConfig(patch) {
