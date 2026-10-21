@@ -1053,21 +1053,24 @@ $('backspaceBtn').addEventListener('click', () => { sentence.pop(); renderStrip(
 $('clearBtn').addEventListener('click', () => { sentence = []; renderStrip(); stopSpeaking(); applyPendingBoard(); });
 $('homeBtn').addEventListener('click', () => goTo(HOME));
 
-// Press and hold to open grown-up settings, so the child can't open it by accident.
-(() => {
-  const btn = $('lockBtn');
+// Press and hold to start editing, so Robyn can't by accident. The secret
+// spot is the page name at the top (the old circle button still works too).
+function holdToEdit(el) {
   let timer = 0;
-  btn.style.setProperty('--hold-ms', HOLD_MS + 'ms');
-  const cancel = () => { clearTimeout(timer); btn.classList.remove('holding'); };
-  btn.addEventListener('pointerdown', (e) => {
+  el.style.setProperty('--hold-ms', HOLD_MS + 'ms');
+  const cancel = () => { clearTimeout(timer); el.classList.remove('holding'); };
+  el.addEventListener('pointerdown', (e) => {
+    if (editing) return;
     e.preventDefault();
-    btn.classList.add('holding');
+    el.classList.add('holding');
     // Holding goes straight into editing; ⚙ Settings in the edit bar has the rest.
     timer = setTimeout(() => { cancel(); setEditing(true); }, HOLD_MS);
   });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => btn.addEventListener(ev, cancel));
-  btn.addEventListener('contextmenu', (e) => e.preventDefault());
-})();
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => el.addEventListener(ev, cancel));
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+holdToEdit($('pageTitle'));
+holdToEdit($('lockBtn'));
 
 // Block pinch-zoom and double-tap zoom on iPad Safari, which ignores user-scalable.
 document.addEventListener('gesturestart', (e) => e.preventDefault());

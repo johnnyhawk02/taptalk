@@ -24,7 +24,7 @@ If a token is lost or expires, just make a new one. If the iPad is ever lost, de
 
 ## 2. Link the computer
 
-In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari or Chrome), hold the circle at the top right, then tap **⚙ Settings** in the purple bar:
+In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari or Chrome), hold the page name at the top of the screen, then tap **⚙ Settings** in the purple bar:
 
 1. On the **Sharing** tab, set **This device** to **Editing computer**.
 2. Paste the computer token.
@@ -32,7 +32,7 @@ In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari 
 
 ## 3. Link Robyn's iPad
 
-On the iPad, hold the circle at the top right, then tap **⚙ Settings** in the purple bar and open the **Sharing** tab:
+On the iPad, hold the page name at the top of the screen, then tap **⚙ Settings** in the purple bar and open the **Sharing** tab:
 
 1. Set **This device** to **Robyn's iPad**.
 2. Paste the iPad token. It fetches the shared board straight away. The first time, the iPad takes the shared board as it is.
@@ -42,7 +42,7 @@ On the iPad, hold the circle at the top right, then tap **⚙ Settings** in the 
 ## Day to day
 
 - **On the computer:** click **Edit** (or press **E**), make your changes, then press **Send to tablet** in the purple bar. Press **E** or **Esc** to stop editing. While editing, the computer shows a smaller view so whole pages fit. **Full-size view** shows it the size Robyn sees it.
-- **At school:** hold the circle (top right) to start editing, make changes, and tap **Done**. They're sent automatically.
+- **At school:** hold the page name at the top of the screen to start editing, make changes, and tap **Done**. They're sent automatically.
 - **To pick up changes right away**, on either device: grown-up settings → **Check for changes now**.
 ## Automatic or manual
 
