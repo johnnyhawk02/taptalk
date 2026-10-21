@@ -51,7 +51,7 @@
     <div class="page-head" id="pageHead">
       <h1 id="pageTitle">Home</h1>
       <div class="edit-banner" id="editBanner" hidden>
-        <span id="editHint">Editing — tap a button to change it</span>
+        <span class="edit-hint"><b>Editing</b><span class="edit-detail"> — <span id="editDetail">tap a button to change it</span></span></span>
         <button class="pill" id="settingsFromBanner" aria-label="Settings">⚙ Settings</button>
         <button class="pill" id="compactToggle" hidden>Full-size view</button>
         <button class="pill" id="sendFromBanner" hidden>Send to tablet</button>
@@ -74,6 +74,8 @@
         <h2>Grown-up settings</h2>
         <button class="pill" value="close">Close</button>
       </header>
+      <div class="settings-body">
+        <div class="settings-col">
 
       <section>
         <h3>Board</h3>
@@ -91,7 +93,7 @@
             <option value="1000">1 second</option><option value="2000">2 seconds</option>
           </select>
         </label>
-        <div class="row">Skin colour in pictures
+        <div class="row">Skin colour
           <div class="swatches" id="skinSwatches"></div>
         </div>
       </section>
@@ -105,14 +107,16 @@
         <button type="button" class="wide-btn ghost" id="testVoice">Test voice</button>
       </section>
 
+        </div>
+        <div class="settings-col">
       <section>
         <h3>Share the board between devices</h3>
         <label class="row">This device
           <select id="syncMode">
             <option value="off">Not linked</option>
-            <option value="send">Edits the board (computer)</option>
-            <option value="both">Gets the board and sends its changes (school iPad)</option>
-            <option value="receive">Gets the board only (read-only)</option>
+            <option value="send">Editing computer</option>
+            <option value="both">Robyn's iPad</option>
+            <option value="receive">Gets changes only</option>
           </select>
         </label>
         <div id="syncFields">
@@ -120,7 +124,7 @@
           <label class="field">GitHub token<input type="password" id="syncToken" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="github_pat_…"></label>
           <button type="button" class="wide-btn primary" id="syncSend">Send board to tablet</button>
           <label class="row" id="syncAutoRow">Get changes automatically <input type="checkbox" id="syncAuto"></label>
-          <label class="row" id="syncAutoSendRow">Send changes automatically when editing is done <input type="checkbox" id="syncAutoSend"></label>
+          <label class="row" id="syncAutoSendRow">Send changes when done editing <input type="checkbox" id="syncAutoSend"></label>
           <button type="button" class="wide-btn ghost" id="syncCheck">Check for changes now</button>
           <p class="hint" id="syncStatus" role="status"></p>
         </div>
@@ -153,6 +157,8 @@
           A few extra symbols (I, you, stop, please, thank you, again) were drawn for TapTalk and are shared under the same licence.</p>
         <p class="hint" id="installHint"></p>
       </section>
+        </div>
+      </div>
     </form>
   </dialog>
 
@@ -215,6 +221,7 @@
       </header>
       <div class="crop-body">
         <div class="crop-stage"><canvas id="cropCanvas" aria-label="Picture. Drag to move, pinch to zoom."></canvas></div>
+        <div class="crop-controls">
         <p class="hint crop-tip">Drag to move · pinch or use the slider to zoom</p>
         <label class="crop-row"><span>Zoom</span><input type="range" id="cropZoom" min="1" max="5" step="0.01" value="1"></label>
         <div class="crop-row">
@@ -233,6 +240,7 @@
           <button type="button" class="chip" data-bg="white">White</button>
           <button type="button" class="chip" data-bg="none">See-through</button>
           <button type="button" class="chip" data-bg="black">Black</button>
+        </div>
         </div>
       </div>
       <footer class="sheet-foot">
@@ -259,10 +267,13 @@
   <dialog id="picker" class="sheet tall">
     <div class="sheet-inner">
       <header class="sheet-head">
-        <input type="search" id="pickerSearch" placeholder="Search pictures and photos…" autocomplete="off" autocapitalize="none">
-        <button class="pill" id="pickerGoogle" title="Opens Google Images in a new tab">Google Images ↗</button>
+        <h2>Choose picture</h2>
         <button class="pill" id="pickerClose">Close</button>
       </header>
+      <div class="picker-toolbar">
+        <input type="search" id="pickerSearch" placeholder="Search pictures and photos…" autocomplete="off" autocapitalize="none">
+        <button class="pill" id="pickerGoogle" title="Opens Google Images in a new tab">Google Images ↗</button>
+      </div>
       <div class="picker-grid" id="pickerGrid"></div>
     </div>
   </dialog>

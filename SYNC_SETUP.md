@@ -26,7 +26,7 @@ If a token is lost or expires, just make a new one. If the iPad is ever lost, de
 
 In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari or Chrome), hold the circle at the top right, then tap **⚙ Settings** in the purple bar:
 
-1. Under **Share the board between devices**, set **This device** to **Edits the board (computer)**.
+1. Under **Share the board between devices**, set **This device** to **Editing computer**.
 2. Paste the computer token.
 3. Press **Send board to tablet**. The first send makes the computer's board the shared one.
 
@@ -34,10 +34,10 @@ In TapTalk on the computer (<https://johnnyhawk02.github.io/taptalk/> in Safari 
 
 On the iPad, hold the circle at the top right, then tap **⚙ Settings** in the purple bar:
 
-1. Set **This device** to **Gets the board and sends its changes (school iPad)**.
+1. Set **This device** to **Robyn's iPad**.
 2. Paste the iPad token. It fetches the shared board straight away. The first time, the iPad takes the shared board as it is.
 
-**Gets the board only (read-only)** is also available, for a device that should never send changes. Its edits stay on that device only.
+**Gets changes only** is also available, for a device that should never send changes. Its edits stay on that device only.
 
 ## Day to day
 
@@ -51,7 +51,7 @@ Each device has two tick boxes in **⚙ Settings** (hold the circle, then tap �
 | Setting | Ticked | Unticked |
 |---|---|---|
 | **Get changes automatically** | Picks up changes from the other device by itself | Only when you tap **Check for changes now** |
-| **Send changes automatically when editing is done** | Sends as soon as you finish editing (**Done**, or **E** on the computer) | Changes wait until you press **Send** (in the purple editing bar, or grown-up settings) |
+| **Send changes when done editing** | Sends as soon as you finish editing (**Done**, or **E** on the computer) | Changes wait until you press **Send** (in the purple editing bar, or grown-up settings) |
 
 By default, Robyn's iPad gets and sends automatically, and the computer gets automatically but sends only when you press **Send to tablet**. Change either on either device. For example, untick **Get changes automatically** on the iPad so its board doesn't change during the school day.
 

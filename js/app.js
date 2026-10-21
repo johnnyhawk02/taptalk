@@ -272,11 +272,11 @@ function render() {
   $('editToggle').hidden = syncMode !== 'send';
   $('editToggle').setAttribute('aria-pressed', String(editing));
   $('editToggleText').textContent = editing ? 'Done' : 'Edit';
-  $('editHint').textContent = syncMode === 'receive'
-    ? 'Editing — changes made here stay on this iPad only'
-    : syncMode === 'both' ? (autoSend() ? 'Editing — your changes are shared when you tap Done' : 'Editing — tap Send changes to share them')
-    : syncMode === 'send' ? 'Editing — click a button to change it · press E when done'
-    : 'Editing — tap a button to change it';
+  // "Editing" always shows; the explanation is hidden on narrower screens.
+  $('editDetail').textContent = syncMode === 'receive' ? 'changes stay on this iPad'
+    : syncMode === 'both' ? (autoSend() ? 'shared when you tap Done' : 'tap Send changes to share')
+    : syncMode === 'send' ? 'press E when done'
+    : 'tap a button to change it';
   $('pageTitle').textContent = page.name;
   grid.style.setProperty('--cols', state.settings.cols);
 
@@ -667,7 +667,7 @@ function fillSyncFields() {
   $('syncToken').value = c.token;
   $('syncFields').hidden = c.mode === 'off';
   $('syncSend').hidden = c.mode !== 'send' && c.mode !== 'both';
-  $('syncSend').textContent = c.mode === 'both' ? 'Send this iPad\'s changes now' : 'Send board to tablet';
+  $('syncSend').textContent = c.mode === 'both' ? 'Send changes now' : 'Send board to tablet';
   $('syncCheck').hidden = c.mode === 'off';
   $('syncAutoRow').hidden = c.mode === 'off';
   $('syncAuto').checked = c.auto;
