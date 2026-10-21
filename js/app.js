@@ -4,6 +4,7 @@ import * as gphotos from './gphotos.js';
 import { TO_ARASAAC } from './migrate.js';
 import * as sync from './sync.js';
 import { editPicture, initCropper } from './cropper.js';
+import { openSheet } from './sheet.js';
 
 const STORE_KEY = 'taptalk.v1';
 const STATE_VERSION = 4; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page
@@ -443,7 +444,7 @@ function openSettings() {
   $('installHint').textContent = isStandalone()
     ? 'Installed on this device — works offline.'
     : 'To install on iPad: open in Safari, tap Share, then "Add to Home Screen".';
-  $('settings').showModal();
+  openSheet($('settings'));
 }
 
 function fillVoiceSelect() {
@@ -665,7 +666,7 @@ function openEditor(item, isNew = !item) {
   fillLinkSelect();
   renderTypePicker();
   renderPreview();
-  $('editor').showModal();
+  openSheet($('editor'));
 }
 
 function fillLinkSelect() {
@@ -840,7 +841,7 @@ async function pickFromGoogle() {
   draft.label = $('edLabel').value;
   draft.say = $('edSay').value;
   draft.hidden = $('edHidden').checked;
-  dlg.showModal();
+  openSheet(dlg);
   try {
     const blob = await gphotos.pick({
       signal: ctrl.signal,
@@ -974,7 +975,7 @@ function searchSymbols(index, q) {
 
 async function openPicker(query) {
   $('pickerSearch').value = query || '';
-  $('picker').showModal();
+  openSheet($('picker'));
   await renderPicker();
 }
 
@@ -1166,7 +1167,17 @@ if ('speechSynthesis' in window) {
 }
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // updateViaCache 'none': when checking for a new version, fetch the file
+  // list (precache.js) fresh too, never a stale HTTP-cached copy.
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => reg.update()).catch(() => {});
+  // When a new version takes over, reload into it — but only when nobody is
+  // mid-sentence or editing, so the board never changes under Robyn's finger.
+  if (navigator.serviceWorker.controller) {
+    navigator.serviceWorker.addEventListener('controllerchange', function reloadWhenSafe() {
+      if (safeToSwap()) location.reload();
+      else setTimeout(reloadWhenSafe, 20_000);
+    });
+  }
 }
 navigator.storage?.persist?.();
 

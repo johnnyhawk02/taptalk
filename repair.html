@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TapTalk repair</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    html, body { overflow: auto; height: auto; -webkit-user-select: text; user-select: text; }
+    main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; font-size: 18px; line-height: 1.45; }
+    h1 { font-size: 26px; margin: 0 0 4px; }
+    .card { background: #fff; border: 2px solid var(--line); border-radius: 16px; padding: 16px; margin: 16px 0; }
+    .card h2 { font-size: 18px; margin: 0 0 8px; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 0; font-size: 16px; }
+    dt { color: #6b6b70; } dd { margin: 0; font-weight: 600; word-break: break-word; }
+    .ok { color: var(--verb); } .bad { color: var(--neg); }
+    #log { font-size: 15px; color: #48484c; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>TapTalk repair</h1>
+    <p class="hint">Your board, photos, settings and tablet link are not touched by anything on this page.</p>
+
+    <div class="card">
+      <h2>Version</h2>
+      <dl>
+        <dt>On this device</dt><dd id="local">checking…</dd>
+        <dt>Latest online</dt><dd id="latest">checking…</dd>
+        <dt>Status</dt><dd id="status">checking…</dd>
+      </dl>
+      <button class="wide-btn primary" id="update">Update TapTalk now</button>
+    </div>
+
+    <div class="card">
+      <h2>Pop-up test</h2>
+      <p class="hint">Tap the button. A white panel should appear. Close it, then read the result below.</p>
+      <button class="wide-btn ghost" id="test">Show a test pop-up</button>
+      <p id="result"></p>
+    </div>
+
+    <div class="card">
+      <h2>Device</h2>
+      <p id="device" class="hint"></p>
+      <p id="log"></p>
+    </div>
+
+    <a class="wide-btn ghost" href="./">Back to TapTalk</a>
+  </main>
+
+  <dialog id="testDialog" class="sheet">
+    <div class="sheet-inner">
+      <header class="sheet-head"><h2>Test pop-up</h2><button class="pill" id="closeTest">Close</button></header>
+      <section><p>If you can read this, pop-ups work on this device.</p></section>
+    </div>
+  </dialog>
+
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const log = (t) => { $('log').textContent += t + '\n'; };
+    $('device').textContent = navigator.userAgent;
+
+    async function versions() {
+      const keys = (await caches.keys()).filter((k) => k.startsWith('taptalk-') && k !== 'taptalk-symbols');
+      const local = keys.map((k) => k.slice('taptalk-'.length)).join(', ') || 'none saved';
+      $('local').textContent = local;
+      try {
+        const text = await (await fetch('precache.js?check=' + Date.now(), { cache: 'no-store' })).text();
+        const latest = (text.match(/CACHE_VERSION = '([^']+)'/) || [])[1] || '?';
+        $('latest').textContent = latest;
+        const same = keys.some((k) => k.endsWith(latest));
+        const reg = await navigator.serviceWorker?.getRegistration?.();
+        const busy = !same && (reg?.installing || reg?.waiting || (!keys.length && reg));
+        $('status').textContent = same ? 'Up to date' : busy ? 'Downloading the new version — check again in a minute' : 'Out of date — tap Update TapTalk now';
+        $('status').className = same ? 'ok' : busy ? '' : 'bad';
+      } catch {
+        $('latest').textContent = 'offline';
+        $('status').textContent = 'Connect to the internet to check';
+      }
+      const regs = await navigator.serviceWorker?.getRegistrations?.() || [];
+      log(`Offline helper: ${regs.length ? regs.map((r) => (r.active ? 'active' : '') + (r.waiting ? ' +waiting' : '') + (r.installing ? ' +installing' : '')).join(', ') : 'none'}`);
+    }
+
+    // Clear the stored copy of the app (pictures are kept), then fetch the new
+    // offline helper and wait for it to take over before opening TapTalk.
+    // (Unregistering doesn't work reliably: the app re-registers straight away.)
+    $('update').addEventListener('click', async () => {
+      const btn = $('update');
+      btn.disabled = true;
+      btn.textContent = 'Updating…';
+      for (const k of await caches.keys()) if (k.startsWith('taptalk-') && k !== 'taptalk-symbols') await caches.delete(k);
+      try {
+        const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+        await reg.update();
+        const worker = reg.installing || reg.waiting;
+        if (worker) {
+          btn.textContent = 'Downloading the new version…';
+          await new Promise((resolve, reject) => {
+            const t = setTimeout(() => reject(new Error('timed out')), 90_000);
+            worker.addEventListener('statechange', () => {
+              if (worker.state === 'activated') { clearTimeout(t); resolve(); }
+              if (worker.state === 'redundant') { clearTimeout(t); reject(new Error('download failed')); }
+            });
+          });
+        }
+      } catch (err) {
+        log('Update: ' + err.message + ' — opening TapTalk anyway; it will load fresh files while online.');
+      }
+      location.href = './?updated=' + Date.now();
+    });
+
+    $('test').addEventListener('click', () => {
+      const d = $('testDialog');
+      d.showModal();
+      requestAnimationFrame(() => {
+        const r = d.getBoundingClientRect();
+        $('result').textContent = `Panel size: ${Math.round(r.width)} × ${Math.round(r.height)} (screen ${innerWidth} × ${innerHeight}). `
+          + (r.height > 40 ? '✓ The panel has a size.' : '✗ The panel has no height.');
+      });
+    });
+    $('closeTest').addEventListener('click', () => $('testDialog').close());
+
+    versions();
+  </script>
+</body>
+</html>

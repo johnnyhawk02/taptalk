@@ -3,6 +3,8 @@
 //
 //   const blob = await editPicture(sourceBlob);   // null if cancelled
 
+import { openSheet } from './sheet.js';
+
 const OUT = 512;        // size of the saved picture
 const MAX_ZOOM = 5;
 
@@ -49,7 +51,7 @@ function start(img, src, resolve) {
   };
   $('cropZoom').value = '1';
   syncChips();
-  $('cropper').showModal();
+  openSheet($('cropper'));
   sizeCanvas();
   draw();
 }
