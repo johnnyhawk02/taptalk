@@ -640,13 +640,40 @@ function moveGhost() {
   d.ghost.style.transform = `translate(${d.x - d.dx}px, ${d.y - d.dy}px) scale(1.06)`;
 }
 
+// Which button slot the finger is over, from the grid's rows and columns
+// rather than from the buttons themselves: they are mid-slide, and chasing
+// them made neighbours flip back and forth. Near a slot's edge (or in the gap
+// between slots) nothing changes, so it can't jitter on a boundary either.
+function slotAt(x, y) {
+  const r = grid.getBoundingClientRect();
+  const cs = getComputedStyle(grid);
+  const cols = state.settings.cols;
+  const gapX = parseFloat(cs.columnGap) || 0;
+  const gapY = parseFloat(cs.rowGap) || 0;
+  const left = r.left + parseFloat(cs.paddingLeft);
+  const top = r.top + parseFloat(cs.paddingTop) - grid.scrollTop;
+  const colW = (grid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - gapX * (cols - 1)) / cols;
+  const rowH = parseFloat(grid.style.getPropertyValue('--row-h')) || colW;
+  const cx = (x - left) / (colW + gapX);
+  const cy = (y - top) / (rowH + gapY);
+  const col = Math.floor(cx);
+  const row = Math.floor(cy);
+  const inX = (cx - col) * (colW + gapX) / colW;
+  const inY = (cy - row) * (rowH + gapY) / rowH;
+  if (col < 0 || col >= cols || row < 0 || inX < 0.15 || inX > 0.85 || inY < 0.15 || inY > 0.85) return -1;
+  const offset = grid.querySelector('.tile.back') ? 1 : 0;
+  return row * cols + col - offset;
+}
+
 // Move the dragged button to where the finger is; the others slide (FLIP).
 function reorderUnder(x, y) {
-  const over = document.elementsFromPoint(x, y).find((el) => el.matches?.('#grid .tile[data-id]'));
-  if (!over || over === drag.tile) return;
   const tiles = dragTiles();
+  const slot = slotAt(x, y);
+  if (slot < 0) return;
+  const to = Math.min(slot, tiles.length - 1);
   const from = tiles.indexOf(drag.tile);
-  const to = tiles.indexOf(over);
+  if (to === from) return;
+  const over = tiles[to];
   const first = new Map(tiles.map((t) => [t, t.getBoundingClientRect()]));
   grid.insertBefore(drag.tile, to > from ? over.nextSibling : over);
   for (const t of tiles) {
