@@ -352,7 +352,17 @@ function speak(text) {
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     return piper.speak(id, text, state.settings).catch(() => speakOnDevice(text));
   }
-  if (piper.isPiper(id) && piperState[id] === 'downloaded') prepareVoice(id);
+  if (piper.isPiper(id) && piperState[id] === 'downloaded' && voiceTrouble.has(id)) prepareVoice(id); // try again in the background
+  else if (piper.isPiper(id) && piperState[id] === 'downloaded') {
+    // Still loading (just after opening): wait a moment rather than switch to
+    // the iPad voice, so Robyn always hears the same voice.
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    piper.unlock();
+    prepareVoice(id);
+    const waited = Promise.race([piper.prepare(id).then(() => true), new Promise((r) => setTimeout(r, 3000, false))]);
+    return waited.then((ready) => (ready ? piper.speak(id, text, state.settings) : speakOnDevice(text)))
+      .catch(() => speakOnDevice(text));
+  }
   return speakOnDevice(text);
 }
 

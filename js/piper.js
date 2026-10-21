@@ -187,12 +187,23 @@ let playing = null;
 let speakNo = 0;
 
 /** Call during a tap: iPads only allow sound to start from one. */
+let waking = null; // the resume() in progress, if the audio was asleep
+
 export function unlock() {
-  // Play like a media app, so the iPad's silent mode doesn't mute Robyn.
-  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older iPadOS */ }
-  ctx ||= new (window.AudioContext || window.webkitAudioContext)();
-  if (ctx.state !== 'running') ctx.resume().catch(() => {});
+  if (!ctx) {
+    // Play like a media app, so the iPad's silent mode doesn't mute Robyn.
+    // Set once: changing it again can make the iPad re-route its sound.
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older iPadOS */ }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (ctx.state !== 'running' && !waking) {
+    waking = ctx.resume().catch(() => {}).finally(() => { waking = null; });
+  }
 }
+
+// iPads switch their speaker on a moment after sound starts, which clips the
+// start of a short word, so every word is given a little silence first.
+const LEAD_IN = 0.12; // seconds
 
 export function stop() {
   speakNo++;
@@ -207,8 +218,11 @@ export async function speak(id, text, opts) {
   const mine = speakNo;
   const { pcm, sampleRate } = await synth(id, text, scaleFor(opts), true);
   if (mine !== speakNo) return; // something newer was said meanwhile
-  const buf = ctx.createBuffer(1, pcm.length, sampleRate);
-  buf.copyToChannel(pcm, 0);
+  if (waking) await waking; // the audio was asleep: let it wake fully first
+  if (mine !== speakNo) return;
+  const lead = Math.round(LEAD_IN * sampleRate);
+  const buf = ctx.createBuffer(1, pcm.length + lead, sampleRate);
+  buf.copyToChannel(pcm, 0, lead);
   const src = ctx.createBufferSource();
   src.buffer = buf;
   src.playbackRate.value = pitchFactor(opts.pitch);
