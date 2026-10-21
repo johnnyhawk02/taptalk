@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Picture review</title>
+<!-- Template: tools/make-pictures.mjs fills in the pictures and writes review.html. -->
+<style>
+  :root {
+    --bg: #f6f4ef; --ink: #1d1d1f; --muted: #6b6b70; --card: #fff; --line: #e2ded5; --bad: #d33131;
+    --pron-bg: #fff4bf; --pron: #d9a900; --verb-bg: #dcf2d3; --verb: #3f9e43; --desc-bg: #dbe8fb; --desc: #3a78cf;
+    --noun-bg: #ffe2c4; --noun: #e57d17; --social-bg: #fde0ec; --social: #d6508e; --neg-bg: #fbd9d9; --neg: #d33131;
+    --q-bg: #ebdffa; --q: #8455cf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #1c1c1e; --ink: #f2f2f7; --muted: #a1a1a6; --card: #2c2c2e; --line: #3a3a3c; }
+  }
+  :root[data-theme="dark"] { --bg: #1c1c1e; --ink: #f2f2f7; --muted: #a1a1a6; --card: #2c2c2e; --line: #3a3a3c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 16px 60px; background: var(--bg); color: var(--ink); font: 16px/1.4 -apple-system, system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto 16px; }
+  h1 { font-size: 22px; margin: 0; }
+  p.how { color: var(--muted); margin: 4px 0 0; }
+  .tools { display: flex; gap: 8px; flex-wrap: wrap; }
+  button.pill { font: inherit; font-weight: 600; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-w, 200px), 1fr)); gap: 14px; max-width: 1200px; margin: 0 auto; }
+  .small .grid { --card-w: 120px; }
+  .card { position: relative; background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 10px; cursor: pointer; text-align: center; }
+  .tile { border-radius: 14px; border: 4px solid var(--tile-line); background: var(--tile-bg); aspect-ratio: 1; display: grid; place-items: center; padding: 8px; }
+  .tile img { width: 100%; height: 100%; object-fit: contain; }
+  .word { font-weight: 700; margin: 6px 0 2px; }
+  .was { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 13px; }
+  .was img { width: 34px; height: 34px; object-fit: contain; background: #fff; border-radius: 6px; }
+  .small .was { display: none; }
+  .card.bad { border-color: var(--bad); }
+  .card.bad .tile { opacity: 0.35; }
+  .card.bad::after { content: "✕"; position: absolute; top: 18px; right: 18px; width: 40px; height: 40px; border-radius: 50%; background: var(--bad); color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: 800; }
+  .count { color: var(--muted); }
+  .empty { max-width: 1200px; margin: 40px auto; color: var(--muted); }
+  .t-pron { --tile-bg: var(--pron-bg); --tile-line: var(--pron); } .t-verb { --tile-bg: var(--verb-bg); --tile-line: var(--verb); }
+  .t-desc { --tile-bg: var(--desc-bg); --tile-line: var(--desc); } .t-noun { --tile-bg: var(--noun-bg); --tile-line: var(--noun); }
+  .t-social { --tile-bg: var(--social-bg); --tile-line: var(--social); } .t-neg { --tile-bg: var(--neg-bg); --tile-line: var(--neg); }
+  .t-q { --tile-bg: var(--q-bg); --tile-line: var(--q); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Picture review</h1>
+    <p class="how">Tap a picture to mark it as bad; tap again to undo. Each one sits on its button colour, with today's ARASAAC picture underneath.</p>
+  </div>
+  <div class="tools">
+    <span class="count" id="count"></span>
+    <button class="pill" id="size" type="button">Button size</button>
+    <button class="pill" id="copy" type="button">Copy list of bad ones</button>
+  </div>
+</header>
+<main class="grid" id="grid"></main>
+<script>
+  const PICTURES = /*PICTURES*/[];
+  const KEY = 'picture-review.bad';
+  let bad = new Set();
+  try { bad = new Set(JSON.parse(localStorage.getItem(KEY)) || []); } catch { /* fresh start */ }
+  const keep = () => { try { localStorage.setItem(KEY, JSON.stringify([...bad])); } catch { /* not vital */ } };
+  const grid = document.getElementById('grid');
+
+  function draw() {
+    if (!PICTURES.length) { grid.outerHTML = '<p class="empty">No pictures yet. Run tools/make-pictures.mjs.</p>'; return; }
+    grid.replaceChildren(...PICTURES.map((p) => {
+      const card = document.createElement('div');
+      card.className = 'card' + (bad.has(p.label) ? ' bad' : '');
+      card.innerHTML = `<div class="tile t-${p.type}"><img alt=""></div><div class="word"></div>`
+        + (p.arasaac ? '<div class="was">now: <img alt=""></div>' : '');
+      card.querySelector('.tile img').src = p.file + '?' + Date.now();
+      card.querySelector('.word').textContent = p.label;
+      if (p.arasaac) card.querySelector('.was img').src = p.arasaac;
+      card.addEventListener('click', () => {
+        if (bad.has(p.label)) bad.delete(p.label); else bad.add(p.label);
+        keep();
+        draw();
+      });
+      return card;
+    }));
+    document.getElementById('count').textContent = `${PICTURES.length - bad.size} good · ${bad.size} bad`;
+  }
+
+  document.getElementById('size').addEventListener('click', (e) => {
+    const small = document.body.classList.toggle('small');
+    e.target.textContent = small ? 'Big' : 'Button size';
+  });
+  document.getElementById('copy').addEventListener('click', async (e) => {
+    const text = [...bad].join(', ') || '(none)';
+    try { await navigator.clipboard.writeText('Bad pictures: ' + text); e.target.textContent = 'Copied!'; }
+    catch { prompt('Copy this:', 'Bad pictures: ' + text); }
+    setTimeout(() => { e.target.textContent = 'Copy list of bad ones'; }, 1500);
+  });
+  draw();
+</script>
+</body>
+</html>
