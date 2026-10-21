@@ -467,7 +467,26 @@ new ResizeObserver(sizeRows).observe(grid);
 
 // ---------- Settings ----------
 
+function renderTrash() {
+  const list = readTrash();
+  $('trashSection').hidden = !list.length;
+  $('trashList').replaceChildren(...list.map((entry) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const name = document.createElement('span');
+    name.textContent = `${entry.item.label} — ${state.pages[entry.pageId]?.name || 'Home'}`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pill';
+    btn.textContent = 'Restore';
+    btn.addEventListener('click', () => { restoreButton(entry); renderTrash(); });
+    row.append(name, btn);
+    return row;
+  }));
+}
+
 function openSettings() {
+  renderTrash();
   const s = state.settings;
   $('startEditing').hidden = editing;
   $('setCols').value = String(s.cols);
@@ -531,8 +550,22 @@ function setEditing(on) {
   editing = on;
   try { sessionStorage.setItem(EDIT_KEY, on ? '1' : ''); } catch { /* not important */ }
   render();
-  if (!on) { applyPendingBoard(); shareIfUnsent(); }
+  if (on) armEditTimeout(); else { clearTimeout(editIdleTimer); applyPendingBoard(); shareIfUnsent(); }
 }
+
+// If a grown-up hands the iPad back still in edit mode, it switches off by
+// itself after a few minutes untouched (as if they'd tapped Done).
+const EDIT_IDLE_MS = 3 * 60_000;
+let editIdleTimer = 0;
+function armEditTimeout() {
+  clearTimeout(editIdleTimer);
+  if (!editing || sync.config().mode === 'send') return; // not on the editing computer
+  editIdleTimer = setTimeout(() => {
+    if (document.querySelector('dialog[open]')) armEditTimeout(); // mid-edit: wait
+    else setEditing(false);
+  }, EDIT_IDLE_MS);
+}
+['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, () => { if (editing) armEditTimeout(); }, true));
 
 $('startEditing').addEventListener('click', () => { $('settings').close(); setEditing(true); });
 $('doneEditing').addEventListener('click', () => setEditing(false));
@@ -1013,15 +1046,68 @@ function moveItem(dir) {
   render();
 }
 
+// ---------- Undo and recently deleted ----------
+// No "are you sure?" pop-ups: every change can be undone straight away, and
+// deleted buttons can be restored later from Settings.
+
+const TRASH_KEY = 'taptalk.trash';
+const TRASH_MAX = 30;
+let undoAction = null;
+let undoTimer = 0;
+
+function readTrash() {
+  try { return JSON.parse(localStorage.getItem(TRASH_KEY)) || []; } catch { return []; }
+}
+function writeTrash(list) {
+  try { localStorage.setItem(TRASH_KEY, JSON.stringify(list.slice(0, TRASH_MAX))); } catch { /* full: not vital */ }
+}
+
+function offerUndo(text, undo) {
+  undoAction = undo;
+  $('undoText').textContent = text;
+  $('undoBar').hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => { $('undoBar').hidden = true; undoAction = null; }, 8000);
+}
+$('undoBtn').addEventListener('click', () => {
+  const undo = undoAction;
+  undoAction = null;
+  $('undoBar').hidden = true;
+  undo?.();
+});
+
+// After an undo or restore: save, show it, and share it like any edit.
+function afterRestore() {
+  markChanged();
+  save();
+  render();
+  shareIfUnsent();
+}
+
+// Puts a deleted button back. Marking it as just edited makes it win over
+// its deletion on the other device too.
+function restoreButton(entry) {
+  const page = state.pages[entry.pageId] || state.pages[HOME];
+  if (!page.items.some((it) => it.id === entry.item.id)) {
+    page.items.splice(Math.min(entry.index, page.items.length), 0, { ...entry.item, updatedAt: now() });
+  }
+  writeTrash(readTrash().filter((t) => t.item.id !== entry.item.id));
+  afterRestore();
+}
+
 $('deleteBtn').addEventListener('click', () => {
-  if (!confirm(`Delete "${draft.label}"? Tip: you can hide it instead.`)) return;
   const page = state.pages[pageId];
-  page.items = page.items.filter((it) => it.id !== draft.id);
-  state.deleted[draft.id] = now();
+  const index = page.items.findIndex((it) => it.id === draft.id);
+  if (index < 0) return;
+  const [item] = page.items.splice(index, 1);
+  const entry = { item, pageId, index, at: now() };
+  state.deleted[item.id] = entry.at;
+  writeTrash([entry, ...readTrash().filter((t) => t.item.id !== item.id)]);
   markChanged();
   save();
   $('editor').close();
   render();
+  offerUndo(`Deleted “${item.label}”`, () => restoreButton(entry));
 });
 
 $('editorForm').addEventListener('submit', (e) => {
@@ -1045,10 +1131,21 @@ $('editorForm').addEventListener('submit', (e) => {
   draft.updatedAt = now();
   const items = state.pages[pageId].items;
   const i = items.findIndex((it) => it.id === draft.id);
+  const before = i >= 0 ? { ...items[i] } : null;
+  const where = pageId;
+  const saved = draft;
   if (i >= 0) items[i] = draft; else items.push(draft);
   markChanged();
   save();
   render();
+  offerUndo(before ? `Changed “${before.label}”` : `Added “${saved.label}”`, () => {
+    const list = state.pages[where]?.items;
+    const at = list ? list.findIndex((it) => it.id === saved.id) : -1;
+    if (at < 0) return;
+    if (before) list[at] = { ...before, updatedAt: now() };
+    else { list.splice(at, 1); state.deleted[saved.id] = now(); }
+    afterRestore();
+  });
 });
 
 // ---------- Symbol picker ----------

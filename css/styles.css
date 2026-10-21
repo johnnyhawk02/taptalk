@@ -140,6 +140,16 @@ button { cursor: pointer; }
 .edit-banner { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 12px; background: var(--q-bg); border: 2px solid var(--q); padding: 4px 6px 4px 14px; border-radius: 999px; font-weight: 600; }
 .edit-banner[hidden] { display: none; }
 
+.undo-bar {
+  position: fixed; left: 50%; bottom: calc(var(--safe-b) + 20px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 16px; padding: 10px 10px 10px 20px; border-radius: 999px;
+  background: #1d1d1f; color: #fff; font-weight: 600; font-size: 17px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); z-index: 10;
+  max-width: calc(100vw - 32px);
+}
+.undo-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.undo-bar .pill { background: #fff; color: #1d1d1f; border: none; }
+#trashList .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---------- Grid ---------- */
 .grid {
   flex: 1;

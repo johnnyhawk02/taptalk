@@ -60,6 +60,11 @@
     </div>
 
     <main class="grid" id="grid" aria-live="off"></main>
+
+    <div class="undo-bar" id="undoBar" hidden role="status">
+      <span id="undoText"></span>
+      <button class="pill" id="undoBtn">Undo</button>
+    </div>
   </div>
 
   <!-- Grown-up settings -->
@@ -119,6 +124,12 @@
           <button type="button" class="wide-btn ghost" id="syncCheck">Check for changes now</button>
           <p class="hint" id="syncStatus" role="status"></p>
         </div>
+      </section>
+
+      <section id="trashSection" hidden>
+        <h3>Recently deleted</h3>
+        <p class="hint">Buttons deleted on this device. Restore puts a button back where it was.</p>
+        <div id="trashList"></div>
       </section>
 
       <section>
