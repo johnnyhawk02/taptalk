@@ -1,5 +1,5 @@
 :root {
-  --bg: #e3e1dc;
+  --bg: #cdcac3;
   --surface: #ffffff;
   --ink: #1d1d1f;
   --muted: #6b6b70;
@@ -550,3 +550,8 @@ body.has-clip .undo-bar { bottom: calc(var(--safe-b) + 92px); }
 .sidebar .nav-back:not(:disabled) { color: var(--ink); background: var(--surface); border-color: #e4e0d8; }
 .sidebar .nav-back:not(:disabled) svg { stroke: var(--ink); }
 .sidebar.two-col .nav-page[aria-current="page"]::after { display: none; }
+
+/* Buttons sit up off the background with a small shadow */
+.tile:not(.add-tile):not(.preview-tile), .bar-btn:not(.lock-btn), .strip, .sidebar .nav-page, .sidebar .nav-back:not(:disabled) { box-shadow: 0 2px 2px rgba(0, 0, 0, 0.22); }
+.tile:active, .tile.pressed { box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2); }
+.sidebar .nav-page[aria-current="page"] { box-shadow: 0 2px 2px rgba(0, 0, 0, 0.22), 0 2px 10px rgba(132, 85, 207, 0.35); }
