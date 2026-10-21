@@ -10,7 +10,7 @@ import * as piper from './piper.js';
 import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 8; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored
+const STATE_VERSION = 9; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored, 9 = 5 × 4 grid
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -25,7 +25,7 @@ const TYPES = [
 
 const DEFAULT_SETTINGS = {
   cols: 5,
-  rows: 5,          // rows on screen; pages with more buttons scroll
+  rows: 4,          // rows on screen; pages with more buttons scroll
   sidebar: true,    // left-hand column of page buttons
   coreStrip: true,  // core words strip on every page
   nav: [...DEFAULT_NAV],
@@ -156,9 +156,12 @@ function movePagesToSideColumn(pages) {
 
 // v7: buttons became flat (no outline, slightly rounded). Boards still on the
 // old look (rounded, medium outline) move to the new one; a chosen look stays.
+// v9: the grid became 5 across × 4 down; boards still on the old 5 × 5 move too.
 function upgradeLook(settings, version) {
-  if (version >= 7 || (settings.corners ?? 18) !== 18 || (settings.outline ?? 4) !== 4) return settings;
-  return { ...settings, corners: 8, outline: 0 };
+  let s = settings;
+  if (version < 7 && (s.corners ?? 18) === 18 && (s.outline ?? 4) === 4) s = { ...s, corners: 8, outline: 0 };
+  if (version < 9 && (s.cols ?? 5) === 5 && (s.rows ?? 5) === 5) s = { ...s, cols: 5, rows: 4 };
+  return s;
 }
 
 function upgradeSettingsToNav(settings, pages) {
@@ -452,7 +455,7 @@ function sizeRows() {
   // to hit and let the page scroll.
   // A fixed number of rows fills the screen (5 × 5 by default); pages with
   // more buttons scroll. The compact editing view on the computer fits more.
-  const onScreen = Math.max(1, state.settings.rows || 5);
+  const onScreen = Math.max(1, state.settings.rows || 4);
   const rowH = isCompact()
     ? Math.max(64, Math.min((avail - gap * (rows - 1)) / rows, colW * 0.85, 120))
     : Math.max(56, (avail - gap * (onScreen - 1)) / onScreen);
@@ -1005,7 +1008,7 @@ function openSettings() {
   const s = state.settings;
   $('startEditing').hidden = editing;
   $('setCols').value = String(s.cols);
-  $('setRows').value = String(s.rows || 5);
+  $('setRows').value = String(s.rows || 4);
   $('setSidebar').checked = s.sidebar;
   $('setCorners').value = String(s.corners);
   $('setOutline').value = String(s.outline);
