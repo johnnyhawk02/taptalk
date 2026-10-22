@@ -44,7 +44,8 @@ async function askKey() {
 // Every word or phrase a button says.
 const words = new Set();
 const add = (label, say) => { const t = (say || label || '').trim(); if (t) words.add(t); };
-for (const page of Object.values(DEFAULT_PAGES)) for (const [label, , type, extra] of page.items) if (type !== 'folder') add(label, extra?.say);
+// (Not words made from the child's name: each device fills that in itself.)
+for (const page of Object.values(DEFAULT_PAGES)) for (const [label, , type, extra] of page.items) if (type !== 'folder' && !label.includes('{name}')) add(label, extra?.say);
 let board = null;
 if (!BUNDLE) try { board = JSON.parse(gh('api', `repos/${SYNC_REPO}/contents/board.json`, '-H', 'Accept: application/vnd.github.raw')); } catch { console.log('(Could not read the shared board; recording the starting board only.)'); }
 if (board) for (const page of Object.values(board.pages)) for (const it of page.items) if (it.type !== 'folder') add(it.label, it.say);

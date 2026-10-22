@@ -291,13 +291,14 @@ export const DEFAULT_PAGES = {
     ],
   },
 
-  // For new staff and visitors. Edit the words to fit Robyn.
+  // For new staff and visitors. {name} is the child's name, asked for when
+  // TapTalk first starts; without one, that button is left out.
   aboutme: {
     name: 'About me',
     stay: true,
     icon: 'a:6009',
     items: [
-      ['Hello, I\'m Robyn', 'a:6009', 'social', { say: 'Hello, my name is Robyn.' }], ['I\'m 10', 'a:29254', 'pron', { say: 'I am ten years old.' }], ['I talk with my iPad', 'a:28099', 'pron', { say: 'I talk with my iPad. Please wait while I find my words.' }], ['I sign too', 'a:11754', 'pron', { say: 'I use signs too.' }], ['give me time', 'a:8109', 'social', { say: 'Please give me time to answer.' }],
+      ['Hello, I\'m {name}', 'a:6009', 'social', { say: 'Hello, my name is {name}.' }], ['I talk with my iPad', 'a:28099', 'pron', { say: 'I talk with my iPad. Please wait while I find my words.' }], ['I sign too', 'a:11754', 'pron', { say: 'I use signs too.' }], ['give me time', 'a:8109', 'social', { say: 'Please give me time to answer.' }],
       ['I understand', 'a:11697', 'pron', { say: 'I understand more than I can say.' }], ['show me', 'a:11308', 'verb', { say: 'Show me, please.' }], ['let me choose', 'a:30510', 'social', { say: 'Please let me choose.' }], ['talk to me', 'a:3345', 'social', { say: 'Please talk to me, not about me.' }], ['I need breaks', 'a:3299', 'pron', { say: 'Sometimes I need a break.' }],
       ['when I\'m upset', 'a:11959', 'pron', { say: 'When I\'m upset, please give me space and keep it calm and quiet.' }], ['ask me', 'a:9843', 'social', { say: 'Please ask me.' }],
     ],

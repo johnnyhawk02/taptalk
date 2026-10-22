@@ -8,6 +8,6 @@ export const GOOGLE_CLIENT_ID = '416320573513-hodto9a3mnehr8nblnqau1uhaj3goip2.a
 // 'https://taptalk-photos.yourname.workers.dev'
 export const PHOTO_PROXY_URL = 'https://taptalk-photos.johnnyhawk.workers.dev';
 
-// Private GitHub repo that carries the board from the editing computer to the
-// tablet (Grown-up settings → Send to tablet). See SYNC_SETUP.md.
+// Robyn's private GitHub repo: used by tools/record-voice.mjs, and by devices
+// linked before each family named their own repository. See SYNC_SETUP.md.
 export const SYNC_REPO = 'johnnyhawk02/taptalk-robyn';

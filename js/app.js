@@ -36,6 +36,7 @@ const DEFAULT_SETTINGS = {
   debounce: 0,
   speakOnTap: true,
   voice: '',
+  childName: '',    // put into the starting words that use {name} (About me)
   rate: 0.9,
   pitch: 1.1,
   skin: DEFAULT_SKIN,
@@ -48,22 +49,44 @@ const uid = () => 'i' + Math.random().toString(36).slice(2, 10);
 
 // ---------- State ----------
 
-function buildDefaultPages() {
+// `name` is the child's name, put into the starting words that use {name}
+// (those are left out without one).
+function buildDefaultPages(name = '') {
   const pages = {};
+  const fill = (text) => (text || '').replaceAll('{name}', name);
   for (const [pageId, page] of Object.entries(DEFAULT_PAGES)) {
     pages[pageId] = {
       name: page.name,
       ...(page.stay && { stay: true }),
       ...(page.icon && { icon: page.icon }),
-      // Stable ids (from the word), so the starting board is the same on every device.
+      // Stable ids (from the word, before the name goes in), so the starting
+      // board is the same on every device.
       items: page.items.map(([label, sym, type, extra = {}], i, all) => {
         const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const dup = all.slice(0, i).some(([l]) => l.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug);
-        return { id: `d-${pageId}-${slug}${dup ? '-' + i : ''}`, label, sym, type, say: extra.say || '', link: extra.link || '', hidden: false, ...(extra.strip && { strip: true }) };
-      }),
+        return { id: `d-${pageId}-${slug}${dup ? '-' + i : ''}`, label: fill(label), sym, type, say: fill(extra.say), link: extra.link || '', hidden: false, ...(extra.strip && { strip: true }) };
+      }).filter((it, i) => name || !page.items[i][0].includes('{name}')),
     };
   }
   return pages;
+}
+
+// Puts the child's name into the button(s) made from {name} words, adding
+// them if they aren't there yet (e.g. a name given after the board was made).
+function applyChildName(name) {
+  const at = now();
+  for (const [pageId, page] of Object.entries(buildDefaultPages(name || ' '))) {
+    const mine = state.pages[pageId];
+    if (!mine) continue;
+    DEFAULT_PAGES[pageId].items.forEach(([label], i) => {
+      if (!label.includes('{name}')) return;
+      const want = page.items[i];
+      const have = mine.items.find((it) => it.id === want.id);
+      if (!name) { if (have) { mine.items = mine.items.filter((it) => it !== have); state.deleted[have.id] = at; } return; }
+      if (have) Object.assign(have, { label: want.label, say: want.say, updatedAt: at });
+      else { mine.items.splice(i, 0, { ...want, updatedAt: at }); delete state.deleted[want.id]; mine.orderAt = at; }
+    });
+  }
 }
 
 function loadState() {
@@ -87,7 +110,7 @@ function loadState() {
       };
     }
   } catch { /* fall through to defaults */ }
-  return { pages: buildDefaultPages(), settings: { ...DEFAULT_SETTINGS }, deleted: {}, settingsAt: 0 };
+  return { pages: buildDefaultPages(), settings: { ...DEFAULT_SETTINGS }, deleted: {}, settingsAt: 0, fresh: true };
 }
 
 // Edit times let two devices' boards be merged (see merge.js).
@@ -320,6 +343,7 @@ const state = loadState();
 
 // While TapTalk is being developed, show which version is running.
 $('appVersion').textContent = `v ${VERSION} · ${BUILT}`;
+$('aboutVersion').textContent = `TapTalk version ${VERSION} (${BUILT}).`;
 
 // ---------- Page sets ----------
 // A set is a named list of pages for the left-hand column, with its own Home
@@ -507,6 +531,8 @@ function render() {
   document.body.classList.toggle('editing', editing);
   $('editBanner').hidden = !editing;
   const syncMode = sync.config().mode;
+  $('appVersion').hidden = syncMode === 'off'; // shown in Settings → About for everyone else
+  $('googlePhotos').hidden = !googlePhotosReady();
   const manualSend = syncMode === 'send' || (syncMode === 'both' && !autoSend());
   $('sendFromBanner').hidden = !manualSend;
   if (!$('sendFromBanner').disabled) $('sendFromBanner').textContent = sendLabel();
@@ -1457,14 +1483,14 @@ $('backspaceBtn').addEventListener('click', () => { sentence.pop(); renderStrip(
 $('clearBtn').addEventListener('click', () => { sentence = []; renderStrip(); stopSpeaking(); applyPendingBoard(); });
 $('homeBtn').addEventListener('click', () => goTo(homeId()));
 
-// Press and hold to start editing, so Robyn can't by accident. The secret
+// Press and hold to start editing, so the child can't by accident. The secret
 // spot is the page name at the top (the old circle button still works too).
-function holdToEdit(el) {
+function holdToEdit(el, skip = () => false) {
   let timer = 0;
   el.style.setProperty('--hold-ms', HOLD_MS + 'ms');
   const cancel = () => { clearTimeout(timer); el.classList.remove('holding'); };
   el.addEventListener('pointerdown', (e) => {
-    if (editing) return;
+    if (editing || skip()) return;
     e.preventDefault();
     el.classList.add('holding');
     // Holding goes straight into editing; ⚙ Settings in the edit bar has the rest.
@@ -1473,11 +1499,12 @@ function holdToEdit(el) {
   ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => el.addEventListener(ev, cancel));
   el.addEventListener('contextmenu', (e) => e.preventDefault());
 }
-// For now one tap on the page name starts editing. To make it a press and
-// hold again (so Robyn can't by accident), set this back to false.
+// For now one tap on the page name starts editing on Robyn's linked devices.
+// Everyone else (and Robyn's devices, once this is false) presses and holds.
 const TITLE_SINGLE_TAP = true;
-if (TITLE_SINGLE_TAP) $('pageTitle').addEventListener('click', () => { if (!editing) setEditing(true); });
-else holdToEdit($('pageTitle'));
+const singleTapTitle = () => TITLE_SINGLE_TAP && sync.config().mode !== 'off';
+$('pageTitle').addEventListener('click', () => { if (!editing && singleTapTitle()) setEditing(true); });
+holdToEdit($('pageTitle'), singleTapTitle);
 holdToEdit($('lockBtn'));
 
 // Block pinch-zoom and double-tap zoom on iPad Safari, which ignores user-scalable.
@@ -1686,7 +1713,7 @@ document.addEventListener('keydown', (e) => {
 
 $('resetBtn').addEventListener('click', async () => {
   if (!confirm('Reset to the starting board? Your changes and photos will be removed.')) return;
-  replaceBoard(buildDefaultPages(), { ...DEFAULT_SETTINGS, voice: state.settings.voice });
+  replaceBoard(buildDefaultPages(state.settings.childName), { ...DEFAULT_SETTINGS, voice: state.settings.voice, childName: state.settings.childName });
   ensureSets(state.settings); // the starting sets, saved and shared with the reset
   await photos.clear();
   markChanged();
@@ -1695,7 +1722,36 @@ $('resetBtn').addEventListener('click', async () => {
   renderStrip();
   $('settings').close();
   goTo(homeId());
+  showWelcome();
 });
+
+// When this device last saved a backup. The board lives only on this device
+// (unless it's linked), so the Backup tab says how long ago that was.
+const BACKUP_KEY = 'taptalk.lastBackup';
+function showLastBackup() {
+  let at = 0;
+  try { at = Number(localStorage.getItem(BACKUP_KEY)) || 0; } catch { /* ignore */ }
+  $('lastBackup').textContent = at ? `Last backup from this device: ${new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'No backup saved from this device yet.';
+}
+showLastBackup();
+
+// First start (and after a reset): who the board is for. Optional; the name
+// goes into About me ("Hello, I'm …").
+function showWelcome() {
+  $('welcomeName').value = state.settings.childName || '';
+  $('welcome').showModal();
+}
+$('welcomeStart').addEventListener('click', () => {
+  const name = $('welcomeName').value.trim().replace(/\s+/g, ' ').slice(0, 40);
+  state.settings.childName = name;
+  touchSettings();
+  applyChildName(name);
+  markChanged();
+  save(); // also keeps a first start from asking again
+  render();
+  $('welcome').close();
+});
+$('welcomeName').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('welcomeStart').click(); } });
 
 $('exportBtn').addEventListener('click', async () => {
   const data = {
@@ -1705,6 +1761,8 @@ $('exportBtn').addEventListener('click', async () => {
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const name = `taptalk-backup-${new Date().toISOString().slice(0, 10)}.json`;
   const file = new File([blob], name, { type: 'application/json' });
+  try { localStorage.setItem(BACKUP_KEY, String(Date.now())); } catch { /* ignore */ }
+  showLastBackup();
   // iPad: the share sheet lets you save to Files, AirDrop or email it.
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file], title: 'TapTalk backup' }); return; } catch (err) { if (err.name === 'AbortError') return; }
@@ -2191,7 +2249,10 @@ $('pastePhoto').addEventListener('click', async () => {
 });
 
 // Straight from Google Photos (only when js/config.js is filled in).
-$('googlePhotos').hidden = !gphotos.enabled;
+// Google Photos only works for accounts the Google project lets in, so it shows
+// only on devices linked to a shared board (the developer's own family).
+function googlePhotosReady() { return gphotos.enabled && sync.config().mode !== 'off'; }
+$('googlePhotos').hidden = !googlePhotosReady();
 $('googlePhotos').addEventListener('click', pickFromGoogle);
 
 async function pickFromGoogle() {
@@ -2743,6 +2804,7 @@ initCropper();
 try { if (sync.config().mode === 'send' && sessionStorage.getItem(EDIT_KEY)) editing = true; } catch { /* ignore */ }
 render();
 renderStrip();
+if (state.fresh) showWelcome();
 
 syncTick();
 setInterval(syncTick, 5 * 60_000);

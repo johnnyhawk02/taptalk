@@ -147,16 +147,19 @@
         <div class="tab-panel" role="tabpanel" data-panel="share" hidden>
       <section>
         <h3>Share the board between devices</h3>
+        <p class="hint">Optional. Without it, the board stays on this device; use <strong>Save backup</strong> to move it to another one.
+          Sharing needs a free GitHub account and a private repository of your own, which keeps the board and photos.
+          <a href="https://github.com/johnnyhawk02/taptalk/blob/main/SYNC_SETUP.md" target="_blank" rel="noopener">How to set it up</a>.</p>
         <label class="row">This device
           <select id="syncMode">
             <option value="off">Not linked</option>
             <option value="send">Editing computer</option>
-            <option value="both">Robyn's iPad</option>
+            <option value="both">Child's iPad</option>
             <option value="receive">Gets changes only</option>
           </select>
         </label>
         <div id="syncFields">
-          <label class="field">GitHub repository<input type="text" id="syncRepo" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+          <label class="field">GitHub repository<input type="text" id="syncRepo" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="yourname/taptalk-board"></label>
           <label class="field">GitHub token<input type="password" id="syncToken" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="github_pat_…"></label>
           <button type="button" class="wide-btn primary" id="syncSend">Send board to tablet</button>
           <label class="row" id="syncAutoRow">Get changes automatically <input type="checkbox" id="syncAuto"></label>
@@ -192,7 +195,8 @@
       </section>
       <section>
         <h3>Backup</h3>
-        <p class="hint">Save everything (buttons, photos, settings) to a file, or load a saved file on another iPad.</p>
+        <p class="hint">TapTalk keeps the board on this device only. Save everything (buttons, photos, settings) to a file now and then, for example to iCloud Drive, so nothing is lost if the iPad is lost or reset. Load the file to put the board on another iPad.</p>
+        <p class="hint" id="lastBackup" role="status"></p>
         <div class="btn-row">
           <button type="button" class="wide-btn ghost" id="exportBtn">Save backup</button>
           <label class="wide-btn ghost file-btn">Load backup<input type="file" id="importFile" accept="application/json,.json" hidden></label>
@@ -211,6 +215,9 @@
           — <a href="https://mulberrysymbols.org" target="_blank" rel="noopener">mulberrysymbols.org</a>.
           A few extra symbols (I, you, stop, please, thank you, again) were drawn for TapTalk and are shared under the same licence.</p>
         <p>The voice is Coral, an AI voice from OpenAI: each word is recorded once and played back, so it works offline.</p>
+        <p><strong>Free, with no sign-up.</strong> TapTalk has no accounts and sends nothing about you or your child anywhere: the board, photos and recordings stay on this device.
+          Searching for a picture asks ARASAAC's website; ✨ Make picture and recorded voices use OpenAI with your own key, if you add one.</p>
+        <p class="hint" id="aboutVersion"></p>
         <p class="hint" id="installHint"></p>
       </section>
           </div>
@@ -255,7 +262,7 @@
           </div>
 
           <label class="row" id="folderRow">Opens a page <select id="edLink"></select></label>
-          <label class="row">Hide from Robyn <input type="checkbox" id="edHidden"></label>
+          <label class="row">Hide from the child <input type="checkbox" id="edHidden"></label>
           <label class="row">Show in core strip <input type="checkbox" id="edStrip"></label>
 
           <div class="btn-row" id="moveRow">
@@ -384,6 +391,25 @@
       </div>
       <footer class="sheet-foot">
         <button type="button" class="wide-btn primary" id="pageMake" disabled>Make page</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- First start: who the board is for -->
+  <dialog id="welcome" class="sheet">
+    <div class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Welcome to TapTalk</h2>
+      </header>
+      <section class="welcome-body">
+        <label class="field">Who is this board for? Their first name goes on the About me page.
+          <input type="text" id="welcomeName" autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="40" placeholder="First name (you can leave this empty)">
+        </label>
+        <p class="hint">TapTalk is free, with no sign-up. Everything stays on this device.</p>
+        <p class="hint">To change buttons, press and hold the page name at the top for a moment. Settings → Backup saves a copy of the board.</p>
+      </section>
+      <footer class="sheet-foot">
+        <button type="button" class="wide-btn primary" id="welcomeStart">Start</button>
       </footer>
     </div>
   </dialog>

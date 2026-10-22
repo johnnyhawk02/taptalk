@@ -2,6 +2,8 @@
 
 A simple picture talker (AAC) for a child who doesn't speak, built as a web app you can install on an iPad. Its pictures are child-friendly [ARASAAC](https://arasaac.org) pictograms, with [Mulberry Symbols](https://mulberrysymbols.org) available too. It works offline once installed.
 
+**Free, with no sign-up.** Open <https://johnnyhawk02.github.io/taptalk/> on the iPad and choose *Share → Add to Home Screen*. There are no accounts: the board, photos and recordings stay on the device, and TapTalk sends nothing about you or your child anywhere. On first start it asks for the child's first name (optional), for the About me page. Use *Settings → Backup → Save backup* now and then to keep a copy, for example in iCloud Drive.
+
 ## What the child sees
 
 - **Page column** down the left, always visible: **Back**, then Food, Drinks, Play, Feelings, People and Places (edit mode: × to take a page out, + Add to put any page in).
@@ -24,7 +26,7 @@ A simple picture talker (AAC) for a child who doesn't speak, built as a web app 
 - Change the number of buttons per row, turn word labels on or off, and set "ignore repeated taps".
 - Change the **skin colour** used in the pictures. ARASAAC pictures are re-drawn by the ARASAAC server, so the first change needs internet; after that they're kept for offline use.
 - Choose the voice, speed and pitch. On iPad, you can add better voices in *Settings → Accessibility → Spoken Content → Voices* (Enhanced/Premium voices sound the most natural).
-- **Share the board between devices**: edit on a computer and press *Send to tablet*; school can edit on Robyn's iPad and their changes are sent when they tap *Done*. Changes are merged, so both are kept. See [SYNC_SETUP.md](SYNC_SETUP.md).
+- **Share the board between devices** (optional, for families happy to use GitHub): edit on a computer and press *Send to tablet*; school can edit on the child's iPad and their changes are sent when they tap *Done*. Changes are merged, so both are kept. The board travels through a private GitHub repository of your own. See [SYNC_SETUP.md](SYNC_SETUP.md).
 - **Save a backup** (buttons, photos and settings in one file, sent through the share sheet) and **load** it on another device.
 
 ## Putting it on the iPad

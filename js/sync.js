@@ -1,4 +1,5 @@
-// Shares Robyn's board between devices through a private GitHub repository.
+// Shares a board between devices through a private GitHub repository (optional:
+// without it, the board stays on the device).
 //
 //   board.json        pages + settings (+ which photo file is which)
 //   photos/<id>.<ext> each caregiver photo, uploaded once
@@ -23,7 +24,10 @@ const LOCAL_SETTINGS = ['voice', 'activeSet'];
 export function config() {
   let c = {};
   try { c = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { /* use defaults */ }
-  return { mode: 'off', repo: SYNC_REPO, token: '', lastSent: '', lastReceived: '', auto: true, ...c };
+  // Devices linked before sharing became optional relied on SYNC_REPO as the
+  // default; everyone else names their own private repository.
+  if (c.token && !('repo' in c)) c.repo = SYNC_REPO;
+  return { mode: 'off', repo: '', token: '', lastSent: '', lastReceived: '', auto: true, ...c };
 }
 
 export function setConfig(patch) {

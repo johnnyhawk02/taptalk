@@ -609,3 +609,7 @@ dialog.sheet.video-sheet { width: calc(100vw - 24px); height: calc(100dvh - 24px
 
 /* Version, top right, while TapTalk is being developed */
 .app-version { position: fixed; top: calc(var(--safe-t) + 6px); right: calc(var(--safe-r) + 14px); font-size: 11px; color: #6b6b70; pointer-events: none; z-index: 1; }
+
+/* First-start welcome */
+.welcome-body { padding: 4px 20px 10px; }
+.welcome-body input { font-size: 1.2rem; }
