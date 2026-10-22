@@ -1,4 +1,4 @@
-import { DEFAULT_PAGES, DEFAULT_NAV } from './board.js';
+import { DEFAULT_PAGES, DEFAULT_NAV, DEFAULT_SETS } from './board.js';
 import * as photos from './photos.js';
 import * as gphotos from './gphotos.js';
 import { TO_ARASAAC } from './migrate.js';
@@ -329,7 +329,10 @@ $('appVersion').textContent = `v ${VERSION} · ${BUILT}`;
 function ensureSets(settings) {
   if (Array.isArray(settings.sets) && settings.sets.length) return;
   const nav = Array.isArray(settings.nav) ? settings.nav : DEFAULT_NAV;
-  settings.sets = [{ id: 's-everyday', name: 'Everyday', nav: [...nav], home: HOME }];
+  // The starting board gets the starting sets; a board with its own column keeps it as Everyday.
+  settings.sets = nav.join() === DEFAULT_NAV.join()
+    ? DEFAULT_SETS.map((x) => ({ ...x, nav: x.nav.filter((id) => state.pages[id]) })).filter((x) => state.pages[x.home])
+    : [{ id: 's-everyday', name: 'Everyday', nav: [...nav], home: HOME }];
 }
 function allSets() { ensureSets(state.settings); return state.settings.sets; }
 // Which set this device shows is kept apart from the board, so sharing the
@@ -1684,6 +1687,7 @@ document.addEventListener('keydown', (e) => {
 $('resetBtn').addEventListener('click', async () => {
   if (!confirm('Reset to the starting board? Your changes and photos will be removed.')) return;
   replaceBoard(buildDefaultPages(), { ...DEFAULT_SETTINGS, voice: state.settings.voice });
+  ensureSets(state.settings); // the starting sets, saved and shared with the reset
   await photos.clear();
   markChanged();
   save();
