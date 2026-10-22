@@ -24,8 +24,6 @@ export function render() {
   document.documentElement.classList.toggle('compact', isCompact());
   document.body.classList.toggle('editing', ui.editing);
   $('editBanner').hidden = !ui.editing;
-  document.body.classList.toggle('modelling', ui.modelling);
-  $('modelBanner').hidden = !ui.modelling;
   const syncMode = sync.config().mode;
   $('appVersion').hidden = syncMode === 'off'; // shown in Settings → About for everyone else
   $('googlePhotos').hidden = !googlePhotosReady();

@@ -60,7 +60,7 @@ export const SWAP_RETRY_MS = 20_000;
 
 // Only swap the board when Robyn isn't in the middle of something.
 export function safeToSwap() {
-  return !ui.editing && !ui.modelling && ui.sentence.length === 0 && !document.querySelector('dialog[open]');
+  return !ui.editing && ui.sentence.length === 0 && !document.querySelector('dialog[open]');
 }
 
 const localBoard = () => ({ pages: state.pages, deleted: state.deleted, settings: state.settings, settingsAt: state.settingsAt, stateVersion: STATE_VERSION });

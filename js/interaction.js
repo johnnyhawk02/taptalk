@@ -39,40 +39,21 @@ function flash(el) {
   setTimeout(() => el.classList.remove('pressed'), FLASH_MS);
 }
 
-// While modelling, the tapped button lights up long enough for Robyn to see it.
-const MODEL_GLOW_MS = 1200;
-let glowTimer = 0;
-function glow(el) {
-  document.querySelectorAll('.tile.modelled').forEach((t) => t.classList.remove('modelled'));
-  clearTimeout(glowTimer);
-  el.classList.add('modelled');
-  glowTimer = setTimeout(() => el.classList.remove('modelled'), MODEL_GLOW_MS);
-}
-
-// Robyn's own words go into her sentence. Modelled words never do (nor into
-// anything else that keeps her words): they are only spoken.
-function addToSentence(item) {
-  if (ui.modelling) return;
-  ui.sentence.push({ label: item.label, say: item.say || item.label, sym: item.sym, type: item.type });
-  renderStrip();
-}
-
 // A word or page button was tapped (on the grid, or in the core strip).
 function chooseItem(item, tile, { fromStrip = false } = {}) {
   const t = Date.now();
   if (state.settings.debounce && t - lastTap < state.settings.debounce) return;
   lastTap = t;
   flash(tile);
-  if (ui.modelling) glow(tile);
 
   if (item.type === 'folder') {
     goTo(item.link);
     return;
   }
 
-  addToSentence(item);
-  // Modelled words are always spoken: showing a word is the whole point.
-  if (state.settings.speakOnTap || ui.modelling) speak(item.say || item.label);
+  ui.sentence.push({ label: item.label, say: item.say || item.label, sym: item.sym, type: item.type });
+  renderStrip();
+  if (state.settings.speakOnTap) speak(item.say || item.label);
   if (item.video) { openVideo(item.video); return; }
   // Place pages (School, Park…) stay open: you often want several words
   // there; core strip words never jump away from the page either.

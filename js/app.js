@@ -19,7 +19,6 @@ import { init as clipboardInit } from './clipboard.js';
 import { init as undoInit } from './undo.js';
 import { init as pickerInit } from './picker.js';
 import { init as speechInit } from './speech.js';
-import { init as modellingInit } from './modelling.js';
 
 const RECORD_AFTER_MS = 4000;      // record missing words this long after start-up
 const SYNC_EVERY_MS = 5 * 60_000;  // check for a shared board this often
@@ -40,7 +39,6 @@ clipboardInit();
 undoInit();
 pickerInit();
 speechInit();
-modellingInit();
 
 // Record any words not yet recorded (e.g. buttons added on the other device).
 setTimeout(recordWords, RECORD_AFTER_MS);

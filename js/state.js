@@ -111,7 +111,6 @@ export function homeId() {
 export const ui = {
   pageId: homeId(),
   editing: false,
-  modelling: false, // a grown-up is showing words: taps speak but skip the sentence
   sentence: [], // the words in the sentence bar: [{label, say, sym, type}]
   // Pages opened from other pages remember the way back, so "back" on
   // School returns to Places rather than Home.

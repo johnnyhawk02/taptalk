@@ -17,7 +17,4 @@ Run after a change to the app, before it goes to the iPad. Start it with
 9. 📄 Pages: switch page set, rename a page, copy a page, delete it, Undo.
 10. Choose picture: search for "dog" and pick a symbol.
 11. Settings → Backup: Save backup, then load it back.
-12. Settings → Model words (or 🗣 Model words while editing): a tapped word is
-    spoken and ringed in teal, but not added to the sentence bar. Folders still
-    open pages. Stop modelling: taps go into the sentence again.
-13. Reload with the network off (devtools → Offline): the app still opens.
+12. Reload with the network off (devtools → Offline): the app still opens.
