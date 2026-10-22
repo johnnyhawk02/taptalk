@@ -1519,7 +1519,12 @@ async function showVoiceStatus() {
   const btn = $('voiceDownload');
   btn.hidden = true;
   if (clips.isRec(id)) {
-    if (!ai.key()) { text.textContent = 'Add your OpenAI key in the Pictures tab, then record the words.'; return; }
+    if (!ai.key()) {
+      const words = boardWords();
+      const n = await clips.count(id, words);
+      text.textContent = n ? `${n} of ${words.length} words recorded (AI voice), shared from the other device.` : 'Recordings come from the other device when it shares, or add the OpenAI key (Pictures tab) to record here.';
+      return;
+    }
     if (recording) { text.textContent = `Recording words… ${recording.done} of ${recording.total}`; return; }
     const words = boardWords();
     const n = await clips.count(id, words);
@@ -1590,6 +1595,7 @@ async function recordWords(id) {
   const result = await clips.recordAll(id, words, (done) => { recording.done = done; if ($('settings').open) showVoiceStatus(); });
   recording = null;
   if (result.firstError) recordError = result.firstError;
+  if (result.done) shareRecordings();
   showVoiceStatus();
   warmPage();
 }
@@ -1833,10 +1839,25 @@ async function syncBoard({ upload = false, manual = false, report = syncStatus }
       report(sent ? 'Sent ' + when(sync.config().lastSent) + '.'
         : changedHere ? 'Updated with the latest changes.' : 'Already up to date.');
     }
+    shareRecordings();
   } catch (err) {
     if (manual) report((upload ? 'Could not send: ' : 'Could not check: ') + err.message);
   } finally {
     syncing = false;
+  }
+}
+
+// The recorded voice travels with the board: fetch recordings this device
+// lacks, and share any it made itself. In the background, after a sync.
+let sharingClips = false;
+async function shareRecordings() {
+  if (sharingClips || !linked()) return;
+  sharingClips = true;
+  try {
+    const { got } = await sync.syncClips(boardWords());
+    if (got && clips.isRec(state.settings.voice)) { warmPage(); if ($('settings').open) showVoiceStatus(); }
+  } catch { /* try again on the next sync */ } finally {
+    sharingClips = false;
   }
 }
 

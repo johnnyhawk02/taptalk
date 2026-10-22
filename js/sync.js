@@ -9,6 +9,7 @@
 // needs one that can read them. Tokens stay in this device's storage.
 
 import * as photos from './photos.js';
+import * as clips from './clips.js';
 import { merge, fingerprint } from './merge.js';
 import { SYNC_REPO } from './config.js';
 
@@ -145,6 +146,37 @@ export async function exchange(local, { upload = false, progress = () => {} } = 
   }
   setConfig({ lastSent: board.updated, lastReceived: board.updated, linked: true });
   return { board: merged, changedHere, sent: true, adopted };
+}
+
+/**
+ * Share the recorded voice: download the recordings of these words that this
+ * device lacks, and (on a device that sends) upload the ones only it has.
+ * Recordings never change, so there's nothing to merge. Returns counts.
+ */
+export async function syncClips(words, { progress = () => {} } = {}) {
+  const { mode } = config();
+  if (mode === 'off') return { got: 0, sent: 0 };
+  const dir = 'clips/' + clips.VOICE.slice(4);
+  const listing = await gh(dir);
+  const remote = new Set((listing || []).map((f) => f.name));
+  let got = 0;
+  let sent = 0;
+  for (const word of words) {
+    const name = await clips.fileName(word);
+    const here = await clips.has(clips.VOICE, word);
+    if (!here && remote.has(name)) {
+      const res = await gh(`${dir}/${name}`, { raw: true });
+      if (res) { await clips.putData(clips.VOICE, word, await res.arrayBuffer()); got++; progress(got, sent); }
+    } else if (here && !remote.has(name) && (mode === 'send' || mode === 'both')) {
+      const data = await clips.getData(clips.VOICE, word);
+      if (!data) continue;
+      await gh(`${dir}/${name}`, { method: 'PUT', body: { message: `TapTalk: record "${word.slice(0, 40)}"`, content: await blobToBase64(new Blob([data])) } });
+      remote.add(name);
+      sent++;
+      progress(got, sent);
+    }
+  }
+  return { got, sent };
 }
 
 export function markReceived(updated) {

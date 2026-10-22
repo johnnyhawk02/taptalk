@@ -8,18 +8,14 @@ import * as ai from './aipics.js';
 
 const DB = 'taptalk-clips';
 const STORE = 'clips';
-const MODEL = 'gpt-4o-mini-tts';
-const STYLE = 'Speak in a warm, friendly, clear British English accent, as a gentle young woman helping a child to talk. '
+export const MODEL = 'gpt-4o-mini-tts';
+export const STYLE = 'Speak in a warm, friendly, clear British English accent, as a gentle young woman helping a child to talk. '
   + 'Say only these words, naturally and calmly, with no extra sounds.';
 
-export const VOICES = [
-  { id: 'rec:coral', name: 'Coral', about: 'warm' },
-  { id: 'rec:shimmer', name: 'Shimmer', about: 'bright' },
-  { id: 'rec:nova', name: 'Nova', about: 'lively' },
-  { id: 'rec:sage', name: 'Sage', about: 'calm' },
-  { id: 'rec:ballad', name: 'Ballad', about: 'soft, deeper' },
-  { id: 'rec:fable', name: 'Fable', about: 'man, British' },
-];
+// One recorded voice, shared by every device through the private board repo
+// (clips/coral/), so a device without the OpenAI key still gets it.
+export const VOICE = 'rec:coral';
+export const VOICES = [{ id: VOICE, name: 'Coral', about: 'warm, British (recorded AI voice)' }];
 export const isRec = (id) => typeof id === 'string' && id.startsWith('rec:');
 const voiceName = (id) => id.slice(4);
 const keyFor = (voice, text) => `${voice}|${text.trim().toLowerCase()}`;
@@ -51,6 +47,22 @@ let have = null; // keys of the recordings on this device
 async function known() {
   if (!have) have = new Set(await tx('readonly', (s) => s.getAllKeys()).catch(() => []));
   return have;
+}
+
+/** The shared file name for a word's recording (same as tools/record-voice.mjs). */
+export async function fileName(text) {
+  const bytes = new TextEncoder().encode(text.trim().toLowerCase());
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-1', bytes));
+  return [...hash].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 20) + '.mp3';
+}
+
+export async function has(voice, text) { return (await known()).has(keyFor(voice, text)); }
+export async function getData(voice, text) { return (await tx('readonly', (s) => s.get(keyFor(voice, text))))?.data || null; }
+export async function putData(voice, text, data) {
+  const k = keyFor(voice, text);
+  await tx('readwrite', (s) => s.put({ type: 'audio/mpeg', data }, k));
+  (await known()).add(k);
+  decoded.delete(k);
 }
 
 /** How many of these words are recorded in this voice. */
