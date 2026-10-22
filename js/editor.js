@@ -142,15 +142,29 @@ function imgSrcFromHtml(html) {
 
 const looksLikeUrl = (text) => /^(https?:|data:image\/)\S+$/i.test(text.trim());
 
+// Widgit Online symbols (Robyn's iPad only, under the family's subscription).
+// Their links ask for a small size like /280x114/; ask for a big one instead,
+// and keep the whole symbol on a clear background, like the built-in ones.
+const WIDGIT = /^https:\/\/symbols\.widgitonline\.com\//;
+const WIDGIT_SIZE = /\/\d+x\d+\//;
+const SYMBOL_VIEW = { fit: true, shape: 'square', bg: 'none' };
+
 // Works for both the Paste button (async clipboard) and paste events.
 async function pasteFrom({ files = [], html = '', text = '' }) {
+  // An <img> tag copied as text (e.g. from the browser's developer tools).
+  const tagText = /<img\s/i.test(text) ? text : '';
+  let src = imgSrcFromHtml(html) || imgSrcFromHtml(tagText) || (looksLikeUrl(text) ? text.trim() : '');
+  // A copied Widgit picture is small, so fetch the big one it came from.
+  const widgit = WIDGIT.test(src);
+  if (widgit) src = src.replace(WIDGIT_SIZE, '/800x800/');
   const file = files.find((f) => f.type.startsWith('image/'));
-  if (file) { await usePhoto(file); return; }
-  const src = imgSrcFromHtml(html) || (looksLikeUrl(text) ? text.trim() : '');
+  if (file && !widgit) { await usePhoto(file); return; }
   if (src) {
     photoStatus('Getting the picture…');
     const blob = await imageFromSource(src);
-    if (blob) await usePhoto(blob); else photoStatus(LINK_ONLY);
+    if (blob) await usePhoto(blob, widgit ? SYMBOL_VIEW : undefined);
+    else if (file) await usePhoto(file, SYMBOL_VIEW);
+    else photoStatus(LINK_ONLY);
     return;
   }
   photoStatus(text || html
@@ -245,7 +259,7 @@ export function init() {
       for (const item of await navigator.clipboard.read()) {
         const type = item.types.find((t) => t.startsWith('image/'));
         if (type) files.push(new File([await item.getType(type)], 'pasted', { type }));
-        else if (item.types.includes('text/html')) html = await (await item.getType('text/html')).text();
+        if (item.types.includes('text/html')) html = await (await item.getType('text/html')).text();
         else if (item.types.includes('text/plain')) text = await (await item.getType('text/plain')).text();
       }
       await pasteFrom({ files, html, text });
