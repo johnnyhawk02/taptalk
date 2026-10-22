@@ -14,11 +14,12 @@ const ENGINE_FILES = {
   'piper_phonemize.wasm': 635212,
   'piper_phonemize.data': 18077249,
 };
-const VOICE_BYTES = 63.2e6;
+const VOICE_BYTES = 63.2e6; // medium voices; others say their own size
 
 export const VOICES = [
   { id: 'piper:jenny', name: 'Jenny', about: 'woman, southern English', path: 'jenny_dioco/medium/en_GB-jenny_dioco-medium' },
   { id: 'piper:cori', name: 'Cori', about: 'woman, calm and clear', path: 'cori/medium/en_GB-cori-medium' },
+  { id: 'piper:cori-hd', name: 'Cori HD', about: 'clearest, bigger download', path: 'cori/high/en_GB-cori-high', bytes: 114.2e6 },
   { id: 'piper:alba', name: 'Alba', about: 'woman, Scottish', path: 'alba/medium/en_GB-alba-medium' },
   { id: 'piper:southern', name: 'Southern English woman', about: 'brighter', path: 'southern_english_female/low/en_GB-southern_english_female-low' },
   { id: 'piper:alan', name: 'Alan', about: 'man', path: 'alan/medium/en_GB-alan-medium' },
@@ -44,7 +45,7 @@ export async function downloaded(id) {
   return (await missing([...engineUrls(), ...voiceUrls(v)])).length === 0;
 }
 
-const bytesOf = (url) => ENGINE_FILES[url.slice(ENGINE.length)] ?? (url.endsWith('.onnx') ? VOICE_BYTES : 5000);
+const bytesOf = (url) => ENGINE_FILES[url.slice(ENGINE.length)] ?? (url.endsWith('.onnx') ? (VOICES.find((v) => url.endsWith(v.path + '.onnx'))?.bytes || VOICE_BYTES) : 5000);
 
 /** Megabytes still to download for this voice. */
 export async function downloadSize(id) {
@@ -148,7 +149,36 @@ const MEMO_MAX = 400;
 function shape(text, lengthScale) {
   text = text.trim();
   if (/\s/.test(text)) return { text, lengthScale, noise: 1 };
-  return { text: /[.!?]$/.test(text) ? text : text + '.', lengthScale: lengthScale * 1.3, noise: 0.5 };
+  return { text: /[.!?]$/.test(text) ? text : text + '.', lengthScale: lengthScale * 1.3, noise: 0.5, single: true };
+}
+
+// After a short word, some voices (Cori especially) sometimes keep going with
+// a few seconds of babble. A word is one burst of sound, so cut at the first
+// real pause after it, with a short fade, and never play more than 2.5 s.
+function trimAfterWord(pcm, sampleRate) {
+  const frame = Math.round(sampleRate * 0.01);
+  const n = Math.floor(pcm.length / frame);
+  const rms = new Float32Array(n);
+  let peak = 0;
+  for (let f = 0; f < n; f++) {
+    let sum = 0;
+    for (let i = f * frame; i < (f + 1) * frame; i++) sum += pcm[i] * pcm[i];
+    rms[f] = Math.sqrt(sum / frame);
+    peak = Math.max(peak, rms[f]);
+  }
+  const loud = Math.max(peak * 0.06, 0.004);
+  let started = false;
+  let lastLoud = 0;
+  let quiet = 0;
+  let end = n;
+  for (let f = 0; f < n; f++) {
+    if (rms[f] >= loud) { started = true; lastLoud = f; quiet = 0; } else if (started && ++quiet >= 25) { end = lastLoud + 6; break; }
+  }
+  end = Math.min(end * frame, pcm.length, Math.round(sampleRate * 2.5));
+  const out = pcm.slice(0, end);
+  const fade = Math.min(Math.round(sampleRate * 0.04), out.length);
+  for (let i = 0; i < fade; i++) out[out.length - fade + i] *= 1 - i / fade;
+  return out;
 }
 
 async function synth(id, text, lengthScale, urgent) {
@@ -158,7 +188,8 @@ async function synth(id, text, lengthScale, urgent) {
   if (hit) { memo.delete(key); memo.set(key, hit); return hit; }
   const already = making.get(key);
   if (already) { if (urgent) promote(key); return already; }
-  const made = prepare(id).then(() => post({ type: 'say', ...job, key }, urgent)).then((audio) => {
+  const made = prepare(id).then(() => post({ type: 'say', ...job, key }, urgent)).then((raw) => {
+    const audio = job.single ? { ...raw, pcm: trimAfterWord(raw.pcm, raw.sampleRate) } : raw;
     memo.set(key, audio);
     if (memo.size > MEMO_MAX) memo.delete(memo.keys().next().value);
     return audio;
