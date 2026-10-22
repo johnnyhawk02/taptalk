@@ -17,6 +17,9 @@
 const F = (label, sym, link) => [label, sym, 'folder', { link }];
 const S = { strip: true }; // shown in the core words strip on every page
 
+// The id of the Home page.
+export const HOME = 'home';
+
 // Pages in the left-hand column (always visible), top to bottom.
 export const DEFAULT_NAV = ['food', 'drinks', 'play', 'feelings', 'needs', 'choice', 'people', 'places', 'describe', 'body', 'animals', 'colours'];
 
