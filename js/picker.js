@@ -186,7 +186,7 @@ async function renderPicker() {
           })
           : [webNote('No photos found for this word.')];
       } catch (err) {
-        shown = [note(err.message === 'busy' ? 'Photo search is busy — wait a minute and try again.' : 'Photos could not be loaded right now.')];
+        shown = [webNote(err.message === 'busy' ? 'Photo search is busy — wait a minute and try again.' : 'Photos could not be loaded right now.')];
       }
     }
     if (run !== pickerRun) return;
