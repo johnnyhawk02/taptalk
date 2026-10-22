@@ -80,5 +80,7 @@ self.addEventListener('fetch', (event) => {
   const toned = url.origin === 'https://api.arasaac.org' && url.pathname.startsWith('/v1/pictograms/') && url.searchParams.has('skin');
   if (toned) { event.respondWith(cacheFirst(req, true)); return; }
   if (url.origin !== location.origin) return;
+  // The parents' website (and its video) isn't part of the app: straight from the network.
+  if (url.pathname.includes('/parents/')) return;
   event.respondWith(url.pathname.includes('/symbols/') ? cacheFirst(req, false) : networkFirst(req));
 });
