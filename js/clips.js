@@ -47,8 +47,17 @@ async function tx(mode, fn) {
 // so they work straight after install, offline too.
 const BUNDLED = new URL('../symbols/voice/coral/', import.meta.url).href;
 let bundled = null; // file names
+// What last stopped a word playing, for Settings to show (helps find problems).
+export let lastProblem = '';
 async function bundledFiles() {
-  bundled ??= fetch(BUNDLED + 'index.json').then((r) => (r.ok ? r.json() : [])).then((list) => new Set(list)).catch(() => new Set());
+  bundled ??= fetch(BUNDLED + 'index.json', { cache: 'no-cache' })
+    .then((r) => { if (!r.ok) throw new Error(`list of recordings: ${r.status}`); return r.json(); })
+    .then((list) => new Set(list))
+    .catch((err) => {
+      lastProblem = 'Could not get the ' + (err.message.startsWith('list') ? err.message : 'list of recordings');
+      bundled = null; // try again next time rather than give up for the session
+      return new Set();
+    });
   return bundled;
 }
 export async function isBundled(text) { return (await bundledFiles()).has(await fileName(text)); }
@@ -145,7 +154,8 @@ export function unlock() {
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older iPadOS */ }
     ctx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  if (ctx.state !== 'running' && !waking) waking = ctx.resume().catch(() => {}).finally(() => { waking = null; });
+  // Ask again on every tap until it's running (an earlier ask may not have counted).
+  if (ctx.state !== 'running') { const w = ctx.resume().catch(() => {}).finally(() => { if (waking === w) waking = null; }); waking = w; }
 }
 
 export function stop() {
@@ -181,16 +191,32 @@ async function bufferFor(voice, text, { record: canRecord = true } = {}) {
   else if (await isBundled(text)) {
     const res = await fetch(BUNDLED + await fileName(text)).catch(() => null);
     if (res?.ok) data = await res.arrayBuffer();
+    else if (canRecord) lastProblem = `Could not load the recording of “${text}” (${res ? res.status : 'offline'})`;
   }
   if (!data) {
-    if (!canRecord || !navigator.onLine || !ai.key()) return null;
-    try { await record(voice, text); } catch { return null; }
+    if (!canRecord) return null;
+    if (!navigator.onLine || !ai.key()) { lastProblem ||= `“${text}” isn't recorded yet`; return null; }
+    try { await record(voice, text); } catch (err) { lastProblem = `Could not record “${text}”: ${err.message}`; return null; }
     data = (await tx('readonly', (s) => s.get(k)))?.data || null;
     if (!data) return null;
   }
-  const buf = trimSilence(await ctx.decodeAudioData(data.slice(0)));
+  let buf;
+  try {
+    buf = trimSilence(await decode(data.slice(0)));
+  } catch (err) {
+    lastProblem = `Could not play the recording of “${text}”: ${err?.message || err}`;
+    return null;
+  }
   decoded.set(k, buf);
   return buf;
+}
+
+// The callback form works on every iPad Safari; the promise form not on all.
+function decode(data) {
+  return new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(data, resolve, (e) => reject(e || new Error('not a sound file')));
+    p?.catch?.(() => {}); // the promise form also rejects; the callback handles it
+  });
 }
 
 /**
@@ -210,6 +236,8 @@ export async function speak(voice, words) {
   }
   if (mine !== playNo) return true; // something newer was said meanwhile
   if (waking) await waking;
+  if (ctx.state !== 'running') lastProblem = `The iPad's sound didn't start (${ctx.state}); try tapping again`;
+  else lastProblem = '';
   let at = ctx.currentTime + 0.12; // a moment for the iPad's speaker to wake
   const gap = 0.08;
   let last = null;

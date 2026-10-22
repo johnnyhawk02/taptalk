@@ -7,6 +7,7 @@ import { editPicture, initCropper } from './cropper.js';
 import { openSheet } from './sheet.js';
 import { merge, fingerprint } from './merge.js';
 import * as clips from './clips.js';
+import { VERSION, BUILT } from './version.js';
 import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
@@ -209,6 +210,9 @@ function addMissingPages(pages) {
 }
 
 const state = loadState();
+
+// While TapTalk is being developed, show which version is running.
+$('appVersion').textContent = `v ${VERSION} · ${BUILT}`;
 
 // ---------- Page sets ----------
 // A set is a named list of pages for the left-hand column, with its own Home
@@ -1441,9 +1445,11 @@ async function showVoiceStatus() {
   const n = await clips.count(clips.VOICE, words);
   if (recording) return;
   const left = words.length - n;
-  if (!left) { text.textContent = `Coral, a recorded AI voice. All ${n} words ready, offline too.`; return; }
+  const problem = clips.lastProblem ? ` Last problem: ${clips.lastProblem}.` : '';
+  if (!left) { text.textContent = `Coral, a recorded AI voice. All ${n} words ready, offline too.${problem}`; return; }
   text.textContent = `Coral, a recorded AI voice. ${left} new word${left === 1 ? '' : 's'} still to record`
-    + (ai.key() ? (recordError ? `: ${recordError}` : '.') : ': they come from the other device, or add the OpenAI key (Pictures tab) to record here.');
+    + (ai.key() ? (recordError ? `: ${recordError}` : '.') : ': they come from the other device, or add the OpenAI key (Pictures tab) to record here.')
+    + problem;
   btn.textContent = 'Record now';
   btn.hidden = !ai.key();
 }
@@ -1524,7 +1530,7 @@ bindSetting('setAutoHome', 'autoHome', (el) => el.checked);
 bindSetting('setDebounce', 'debounce', (el) => Number(el.value));
 bindSetting('setSpeakTap', 'speakOnTap', (el) => el.checked);
 
-$('testVoice').addEventListener('click', () => speak('Hello! I want to play.'));
+$('testVoice').addEventListener('click', () => speak('Hello! I want to play.').finally(showVoiceStatus));
 
 // The editing computer remembers edit mode across page reloads.
 const EDIT_KEY = 'taptalk.editing';
@@ -2587,7 +2593,20 @@ if ('speechSynthesis' in window) {
   speechSynthesis.addEventListener?.('voiceschanged', loadVoices);
 }
 // iPads only let sound start from a tap, so wake the audio on the first one.
-document.addEventListener('pointerdown', () => clips.unlock(), { capture: true });
+// iPads only let sound start from a tap: wake the recordings' audio, and the
+// backup iPad voice too (by saying nothing), so either can speak later even
+// after a short wait. Done on touch-end/click too, which some iPads require.
+let speechUnlocked = false;
+function unlockSound() {
+  clips.unlock();
+  if (!speechUnlocked && 'speechSynthesis' in window) {
+    speechUnlocked = true;
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    speechSynthesis.speak(u);
+  }
+}
+for (const ev of ['pointerdown', 'touchend', 'click']) document.addEventListener(ev, unlockSound, { capture: true, passive: true });
 // Record any words not yet recorded (e.g. buttons added on the other device).
 setTimeout(recordWords, 4000);
 

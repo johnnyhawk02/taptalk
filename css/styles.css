@@ -606,3 +606,6 @@ dialog.sheet.video-sheet { width: calc(100vw - 24px); height: calc(100dvh - 24px
 .pm-set-card .pm-set { flex: 1; min-width: 0; }
 .pm-set-card .pm-show, .pm-set-card .pm-showing { align-self: center; flex: none; }
 .pm-set-card .pm-showing { padding: 4px 10px; font-size: 13px; }
+
+/* Version, top right, while TapTalk is being developed */
+.app-version { position: fixed; top: calc(var(--safe-t) + 6px); right: calc(var(--safe-r) + 14px); font-size: 11px; color: #6b6b70; pointer-events: none; z-index: 1; }
