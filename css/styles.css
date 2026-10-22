@@ -140,7 +140,7 @@ button { cursor: pointer; }
 .page-head h1 { margin: 0 4px; font-size: 22px; font-weight: 700; color: var(--muted); }
 /* The page name is in the title bar at the top, so this row only appears
    while editing (it holds the editing bar). */
-body:not(.editing) .page-head { display: none; }
+body:not(.editing):not(.modelling) .page-head { display: none; }
 .page-head { justify-content: flex-end; }
 
 /* Page name across the top, like TD Snap */
@@ -623,3 +623,12 @@ dialog.sheet.video-sheet { width: calc(100vw - 24px); height: calc(100dvh - 24px
 .backup-how ol { margin: 6px 0; padding-left: 1.8em; }
 .backup-how li { margin: 3px 0; }
 .backup-how p { margin: 6px 0; }
+
+/* Modelling: a grown-up showing words. Its own colour (teal, used nowhere
+   else) so it is never mistaken for editing or for a word type. */
+:root { --model: #0a9a8f; --model-bg: #d4f3ef; }
+.model-banner { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 10px; background: var(--model-bg); border: 2px solid var(--model); padding: 4px 6px 4px 16px; border-radius: 22px; font-weight: 600; }
+.model-banner .edit-hint { margin-right: auto; }
+.modelling .strip { border-color: var(--model); border-style: dashed; }
+/* :not()s to outrank the buttons' usual shadow, above */
+.tile.modelled:not(.add-tile):not(.preview-tile) { border-color: var(--model); box-shadow: 0 0 0 6px var(--model), 0 0 22px 6px rgba(10, 154, 143, 0.55); z-index: 2; transition: box-shadow 120ms ease-out; }

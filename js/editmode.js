@@ -11,6 +11,7 @@ import { clearClip } from './clipboard.js';
 export const EDIT_KEY = 'taptalk.editing';
 export function setEditing(on) {
   ui.editing = on;
+  if (on) ui.modelling = false;
   try { sessionStorage.setItem(EDIT_KEY, on ? '1' : ''); } catch { /* not important */ }
   if (!on) clearClip();
   render();
