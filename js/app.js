@@ -221,9 +221,15 @@ function ensureSets(settings) {
   settings.sets = [{ id: 's-everyday', name: 'Everyday', nav: [...nav], home: HOME }];
 }
 function allSets() { ensureSets(state.settings); return state.settings.sets; }
+// Which set this device shows is kept apart from the board, so sharing the
+// board with another device can never change it.
+const SET_KEY = 'taptalk.activeSet';
+function showingSetId() {
+  try { return localStorage.getItem(SET_KEY) || state.settings.activeSet || ''; } catch { return state.settings.activeSet || ''; }
+}
 function activeSet() {
   const sets = allSets();
-  return sets.find((x) => x.id === state.settings.activeSet) || sets[0];
+  return sets.find((x) => x.id === showingSetId()) || sets[0];
 }
 const navIds = () => activeSet().nav;
 // This set's Home page (the house button, Back from the first page, …).
@@ -868,9 +874,11 @@ function commitPages() {
   if ($('pageManager').open) renderPM();
 }
 
-function switchSet(id) {
-  state.settings.activeSet = id; // this device only
+function switchSet(id, { quiet = false } = {}) {
+  try { localStorage.setItem(SET_KEY, id); } catch { /* storage full: keep it for now */ }
+  state.settings.activeSet = id; // this device only (not shared)
   save();
+  if (!quiet) offerUndo(`Now showing “${activeSet().name}” on this device`, null);
   pageId = homeId();
   trail = [];
   grid.scrollTop = 0;
@@ -882,11 +890,14 @@ function pmSetsView() {
   const sets = allSets();
   const showing = activeSet().id;
   const list = h('div', { className: 'pm-sets', role: 'list' },
-    ...sets.map((x) => h('button', {
-      type: 'button', className: 'pm-set', 'aria-selected': String(x.id === pmSetId),
-      on: { click: () => { pmSetId = x.id; renderPM(); } },
-    }, h('b', {}, x.name), h('small', {}, `${x.nav.length} page${x.nav.length === 1 ? '' : 's'} · Home: ${pageName(x.home)}`),
-    x.id === showing ? h('span', { className: 'pm-showing' }, 'Showing') : null)),
+    ...sets.map((x) => h('div', { className: 'pm-set-card' },
+      h('button', {
+        type: 'button', className: 'pm-set', 'aria-selected': String(x.id === pmSetId),
+        on: { click: () => { pmSetId = x.id; renderPM(); } },
+      }, h('b', {}, x.name), h('small', {}, `${x.nav.length} page${x.nav.length === 1 ? '' : 's'} · Home: ${pageName(x.home)}`)),
+      x.id === showing
+        ? h('span', { className: 'pm-showing' }, '✓ Showing')
+        : pill('Show', () => { pmSetId = x.id; switchSet(x.id); }, { className: 'pill primary-pill pm-show' }))),
     pill('+ New set', () => {
       const x = { id: 's' + uid(), name: 'New set', nav: [], home: HOME };
       allSets().push(x);
@@ -902,7 +913,7 @@ function pmSetsView() {
     ? h('span', { className: 'pm-showing' }, 'Showing on this device')
     : pill('Show on this device', () => switchSet(set.id), { className: 'pill primary-pill' });
 
-  const homeSel = h('select', { 'aria-label': 'Home page', on: { change: (e) => { set.home = e.target.value; commitSets(); if (set.id === activeSet().id) switchSet(set.id); } } },
+  const homeSel = h('select', { 'aria-label': 'Home page', on: { change: (e) => { set.home = e.target.value; commitSets(); if (set.id === activeSet().id) switchSet(set.id, { quiet: true }); } } },
     ...[HOME, ...Object.keys(state.pages).filter((id) => id !== HOME).sort((a, b) => pageName(a).localeCompare(pageName(b)))]
       .map((id) => new Option(pageName(id), id, false, id === (set.home || HOME))));
 
@@ -945,12 +956,12 @@ function deleteSet(id) {
   state.settings.sets = allSets().filter((x) => x.id !== id);
   pmSetId = state.settings.sets[0].id;
   commitSets();
-  if (wasShowing === id) switchSet(activeSet().id);
+  if (wasShowing === id) switchSet(activeSet().id, { quiet: true });
   offerUndo(`Deleted the “${gone.name}” set`, () => {
     state.settings.sets = before;
     touchSettings();
     afterRestore();
-    if (wasShowing === id) switchSet(id);
+    if (wasShowing === id) switchSet(id, { quiet: true });
   });
 }
 

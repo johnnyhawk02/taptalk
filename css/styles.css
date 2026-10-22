@@ -26,10 +26,9 @@
 
 /* The board stays light in dark mode on purpose: symbols are drawn on white and
    the colour coding must look the same everywhere. Only the chrome dims. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --bg: #2a2a2c; --line: #4a4a4e; --muted: #b8b8bd; }
-}
-:root[data-theme="dark"] { --bg: #2a2a2c; --line: #4a4a4e; --muted: #b8b8bd; }
+/* TapTalk looks the same in the iPad's dark mode: the pictures and colours are
+   made for this light look, and Robyn sees one familiar board. */
+:root { color-scheme: light; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -603,3 +602,7 @@ dialog.sheet.video-sheet { width: calc(100vw - 24px); height: calc(100dvh - 24px
 }
 .pill.primary-pill { background: var(--verb); color: #fff; border-color: var(--verb); }
 .pill.danger-pill { color: var(--neg); border-color: var(--neg-bg); }
+.pm-set-card { display: flex; align-items: stretch; gap: 6px; }
+.pm-set-card .pm-set { flex: 1; min-width: 0; }
+.pm-set-card .pm-show, .pm-set-card .pm-showing { align-self: center; flex: none; }
+.pm-set-card .pm-showing { padding: 4px 10px; font-size: 13px; }
