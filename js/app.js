@@ -1390,7 +1390,11 @@ function holdToEdit(el) {
   ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => el.addEventListener(ev, cancel));
   el.addEventListener('contextmenu', (e) => e.preventDefault());
 }
-holdToEdit($('pageTitle'));
+// For now one tap on the page name starts editing. To make it a press and
+// hold again (so Robyn can't by accident), set this back to false.
+const TITLE_SINGLE_TAP = true;
+if (TITLE_SINGLE_TAP) $('pageTitle').addEventListener('click', () => { if (!editing) setEditing(true); });
+else holdToEdit($('pageTitle'));
 holdToEdit($('lockBtn'));
 
 // Block pinch-zoom and double-tap zoom on iPad Safari, which ignores user-scalable.
