@@ -616,3 +616,10 @@ dialog.sheet.video-sheet { width: calc(100vw - 24px); height: calc(100dvh - 24px
 
 /* "Back up" in the editing bar, when a backup is due */
 .edit-banner .backup-nudge { background: #fff1b8; border-color: #d9a400; }
+
+/* Backup tab: how to keep backups in a folder */
+.backup-how { margin: 10px 0; font-size: 15px; color: var(--muted); }
+.backup-how summary { cursor: pointer; font-weight: 700; color: var(--ink); }
+.backup-how ol { margin: 6px 0; padding-left: 1.8em; }
+.backup-how li { margin: 3px 0; }
+.backup-how p { margin: 6px 0; }

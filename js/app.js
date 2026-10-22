@@ -1776,7 +1776,9 @@ $('exportBtn').addEventListener('click', async () => {
     pages: state.pages, settings: state.settings, deleted: state.deleted, settingsAt: state.settingsAt, photos: await photos.exportAll(),
   };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-  const name = `taptalk-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  // The child's name in the file name helps a family with more than one board.
+  const who = (state.settings.childName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const name = `taptalk-backup-${who ? who + '-' : ''}${new Date().toISOString().slice(0, 10)}.json`;
   const file = new File([blob], name, { type: 'application/json' });
   try { localStorage.setItem(BACKUP_KEY, String(Date.now())); } catch { /* ignore */ }
   showLastBackup();
