@@ -2,7 +2,9 @@
 // recorded voice, and puts the recordings in the private board repo
 // (clips/coral/), where every TapTalk device picks them up when it syncs.
 //
-//   node tools/record-voice.mjs
+//   node tools/record-voice.mjs            Robyn's board -> private repo
+//   node tools/record-voice.mjs --bundle   starting-board words -> built into
+//                                          TapTalk (symbols/voice/coral/)
 //
 // Asks for the OpenAI key without showing it (or reads OPENAI_API_KEY). Uses
 // the GitHub CLI (gh), already signed in, to read the board and push the
@@ -11,14 +13,15 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { DEFAULT_PAGES } from '../js/board.js';
 import { MODEL, STYLE, VOICE } from '../js/clips.js';
 import { SYNC_REPO } from '../js/config.js';
 
 const voice = VOICE.slice(4);
+const BUNDLE = process.argv.includes('--bundle');
 const fileName = (text) => createHash('sha1').update(text.trim().toLowerCase()).digest('hex').slice(0, 20) + '.mp3';
 const gh = (...args) => execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 64 << 20 });
 
@@ -43,19 +46,22 @@ const words = new Set();
 const add = (label, say) => { const t = (say || label || '').trim(); if (t) words.add(t); };
 for (const page of Object.values(DEFAULT_PAGES)) for (const [label, , type, extra] of page.items) if (type !== 'folder') add(label, extra?.say);
 let board = null;
-try { board = JSON.parse(gh('api', `repos/${SYNC_REPO}/contents/board.json`, '-H', 'Accept: application/vnd.github.raw')); } catch { console.log('(Could not read the shared board; recording the starting board only.)'); }
+if (!BUNDLE) try { board = JSON.parse(gh('api', `repos/${SYNC_REPO}/contents/board.json`, '-H', 'Accept: application/vnd.github.raw')); } catch { console.log('(Could not read the shared board; recording the starting board only.)'); }
 if (board) for (const page of Object.values(board.pages)) for (const it of page.items) if (it.type !== 'folder') add(it.label, it.say);
 // Test voice phrase in Settings.
 words.add('Hello! I want to play.');
 
-const dir = mkdtempSync(join(tmpdir(), 'taptalk-voice-'));
-console.log(`Getting the board repo…`);
-gh('repo', 'clone', SYNC_REPO, dir, '--', '--depth', '1', '--quiet');
-const clipDir = join(dir, 'clips', voice);
+// --bundle: into this checkout of TapTalk; otherwise into a copy of the board repo.
+const dir = BUNDLE ? resolve(import.meta.dirname, '..') : mkdtempSync(join(tmpdir(), 'taptalk-voice-'));
+if (!BUNDLE) {
+  console.log(`Getting the board repo…`);
+  gh('repo', 'clone', SYNC_REPO, dir, '--', '--depth', '1', '--quiet');
+}
+const clipDir = BUNDLE ? join(dir, 'symbols', 'voice', voice) : join(dir, 'clips', voice);
 mkdirSync(clipDir, { recursive: true });
 const todo = [...words].filter((w) => !existsSync(join(clipDir, fileName(w))));
 console.log(`${words.size} words; ${words.size - todo.length} already recorded; ${todo.length} to record in "${voice}".`);
-if (!todo.length) { rmSync(dir, { recursive: true, force: true }); process.exit(0); }
+if (!todo.length) { if (!BUNDLE) rmSync(dir, { recursive: true, force: true }); process.exit(0); }
 
 const key = await askKey();
 if (!key) { console.error('No key given.'); process.exit(1); }
@@ -82,6 +88,12 @@ await Promise.all(Array.from({ length: 4 }, async () => {
   }
 }));
 
+if (BUNDLE) {
+  // The list TapTalk reads to know which recordings are built in.
+  writeFileSync(join(clipDir, 'index.json'), JSON.stringify(readdirSync(clipDir).filter((f) => f.endsWith('.mp3')).sort()));
+  console.log(`\nDone: ${done} recorded${failed ? `, ${failed} failed` : ''}, built into TapTalk. Run node tools/build-precache.mjs and publish.`);
+  process.exit(0);
+}
 if (done) {
   const git = (...a) => execFileSync('git', ['-C', dir, ...a], { stdio: 'inherit' });
   git('add', 'clips');

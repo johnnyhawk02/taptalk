@@ -18,7 +18,7 @@ const F = (label, sym, link) => [label, sym, 'folder', { link }];
 const S = { strip: true }; // shown in the core words strip on every page
 
 // Pages in the left-hand column (always visible), top to bottom.
-export const DEFAULT_NAV = ['food', 'drinks', 'play', 'feelings', 'people', 'places', 'describe', 'body', 'animals', 'colours'];
+export const DEFAULT_NAV = ['food', 'drinks', 'play', 'feelings', 'needs', 'choice', 'people', 'places', 'describe', 'body', 'animals', 'colours'];
 
 export const DEFAULT_PAGES = {
   home: {
@@ -112,6 +112,9 @@ export const DEFAULT_PAGES = {
       ['dad', 'a:31146', 'pron'], ['brother', 'a:2423', 'pron'], ['sister', 'a:2422', 'pron'],
       ['nan', 'a:2243', 'pron'], ['grandad', 'a:23717', 'pron'], ['family', 'a:2392', 'pron'],
       ['teacher', 'a:2457', 'pron'], ['baby', 'a:2275', 'pron'], ['doctor', 'a:2467', 'pron'],
+      ['staff', 'a:2456', 'pron'], ['TA', 'a:2476', 'pron'], ['friend', 'a:8487', 'pron'],
+      ['everyone', 'a:36081', 'pron'], ['nobody', 'a:11314', 'pron'], ['we', 'a:7184', 'pron'],
+      ['they', 'a:7032', 'pron'], ['him', 'a:6480', 'pron'], ['her', 'a:7028', 'pron'],
     ],
   },
 
@@ -138,6 +141,12 @@ export const DEFAULT_PAGES = {
       ['computer', 'a:7190', 'noun'], ['music', 'a:24795', 'noun'], ['PE', 'a:10258', 'noun'],
       ['story', 'a:8346', 'noun'], ['sit down', 'a:25082', 'verb'], ['line up', 'a:7102', 'verb'],
       ['my bag', 'a:2475', 'noun'], ['coat', 'a:27978', 'noun'], ['home time', 'a:16805', 'noun'],
+      ['assembly', 'a:39263', 'noun'], ['hall', 'a:38427', 'noun'], ['sensory room', 'a:8217', 'noun'],
+      ['hydro pool', 'a:3142', 'noun'], ['soft play', 'a:8191', 'noun'], ['swimming', 'a:25038', 'noun'],
+      ['cooking', 'a:3235', 'noun'], ['art', 'a:2348', 'noun'], ['speech therapy', 'a:2454', 'noun'],
+      ['OT', 'a:16084', 'noun'], ['physio', 'a:2395', 'noun'], ['taxi', 'a:2580', 'noun'],
+      ['minibus', 'a:35600', 'noun'], ['register', 'a:9902', 'noun'], ['snack time', 'a:24854', 'noun'],
+      ['choosing time', 'a:30510', 'noun'], ['iPad time', 'a:28099', 'noun'], ['my class', 'a:15734', 'noun'],
     ],
   },
 
@@ -192,6 +201,10 @@ export const DEFAULT_PAGES = {
       ['ears', 'a:2871', 'noun'], ['mouth', 'a:2663', 'noun'], ['tummy', 'a:2786', 'noun'],
       ['temperature', 'a:2789', 'noun'], ['injection', 'a:5601', 'noun'], ['scared', 'a:2261', 'desc'],
       ['brave', 'a:36163', 'desc'], ['sticker', 'a:4932', 'noun'], ['all done', 'a:28429', 'social'],
+      ['hospital', 'a:6523', 'noun'], ['hearing aid', 'a:5912', 'noun'], ['glasses', 'a:3329', 'noun'],
+      ['blood test', 'a:5901', 'noun'], ['open wide', 'a:2663', 'verb'], ['a little', 'a:4716', 'desc'],
+      ['a lot', 'a:7168', 'desc'], ['really hurts', 'a:2367', 'desc', { say: 'it really hurts' }], ['it hurts here', 'a:30620', 'desc', { say: 'it hurts here' }],
+      ['feel better', 'a:12293', 'desc'],
     ],
   },
 
@@ -245,6 +258,12 @@ export const DEFAULT_PAGES = {
       ['watch', 'a:2474', 'verb'], ['listen', 'a:2381', 'verb'], ['sleep', 'a:2369', 'verb'],
       ['wash hands', 'a:8617', 'verb'], ['get dressed', 'a:2781', 'verb'], ['tickle', 'a:5480', 'verb'],
       ['hug', 'a:4550', 'verb'], ['brush teeth', 'a:2326', 'verb'], ['swim', 'a:6568', 'verb'],
+      ['do', 'a:32751', 'verb'], ['find', 'a:6019', 'verb'], ['try', 'a:26144', 'verb'],
+      ['finish', 'a:32814', 'verb'], ['wait', 'a:8109', 'verb'], ['show me', 'a:11308', 'verb'],
+      ['choose', 'a:30510', 'verb'], ['share', 'a:16623', 'verb'], ['tidy up', 'a:8680', 'verb'],
+      ['fix', 'a:15327', 'verb'], ['throw', 'a:6543', 'verb'], ['catch', 'a:8187', 'verb'],
+      ['kick', 'a:15463', 'verb'], ['climb', 'a:8226', 'verb'], ['cook', 'a:3235', 'verb'],
+      ['clean', 'a:3351', 'verb'],
     ],
   },
 
@@ -260,6 +279,12 @@ export const DEFAULT_PAGES = {
       ['fast', 'a:5306', 'desc'], ['now', 'a:13026', 'desc'], ['again', 'a:37163', 'desc'],
       ['up', 'a:5388', 'desc'], ['down', 'a:5355', 'desc'], ['in', 'a:7034', 'desc'],
       ['out', 'a:2806', 'desc'], ['on', 'a:7814', 'desc'], ['off', 'a:7020', 'desc'],
+      ['different', 'a:32386', 'desc'], ['it', 'a:31670', 'desc'], ['that', 'a:6906', 'desc'],
+      ['this', 'a:7095', 'desc'], ['here', 'a:5382', 'desc'], ['there', 'a:5375', 'desc'],
+      ['mine', 'a:12264', 'desc'], ['yours', 'a:12281', 'desc'], ['all', 'a:5596', 'desc'],
+      ['some', 'a:5374', 'desc'], ['not', 'a:32308', 'neg'], ['nice', 'a:10212', 'desc'],
+      ['yucky', 'a:32338', 'desc'], ['easy', 'a:32434', 'desc'], ['hard', 'a:32436', 'desc'],
+      ['scary', 'a:39248', 'desc'], ['funny', 'a:24733', 'desc'],
     ],
   },
 
@@ -275,6 +300,9 @@ export const DEFAULT_PAGES = {
       ['tummy ache', 'a:10375', 'noun', { say: 'my tummy hurts' }],
       ['toothache', 'a:10263', 'noun', { say: 'my tooth hurts' }],
       ['itchy', 'a:11356', 'desc'], ['cut', 'a:5484', 'noun'], ['sick', 'a:3308', 'desc'],
+      ['nose', 'a:2887', 'noun'], ['throat', 'a:3332', 'noun'], ['chest', 'a:2853', 'noun'],
+      ['knee', 'a:2810', 'noun'], ['finger', 'a:3298', 'noun'], ['a little', 'a:4716', 'desc'],
+      ['a lot', 'a:7168', 'desc'], ['really hurts', 'a:2367', 'desc', { say: 'it really hurts' }],
     ],
   },
 
@@ -313,6 +341,89 @@ export const DEFAULT_PAGES = {
       ['I love you', 'a:11519', 'social'],
       ['what', 'a:22620', 'q'], ['where', 'a:7764', 'q'], ['who', 'a:9853', 'q'],
       ['when', 'a:22621', 'q'], ['why', 'a:24763', 'q'],
+      ['how are you?', 'a:22619', 'q'], ['I\'m OK', 'a:5397', 'social'], ['sorry', 'a:11625', 'social'],
+      ['excuse me', 'a:24863', 'social'], ['well done', 'a:13018', 'social'], ['cool', 'a:11599', 'social'],
+      F('Funny', 'a:30393', 'funny'), F('Time', 'a:22633', 'time'), F('About me', 'a:6009', 'aboutme'),
+    ],
+  },
+
+  // PDA-friendly: ways to say no, not yet, or my way, respectfully. These
+  // are real communication and should always be listened to.
+  choice: {
+    name: 'My choice',
+    icon: 'a:30510',
+    stay: true,
+    items: [
+      ['my choice', 'a:30510', 'social'], ['not now', 'a:13080', 'neg', { strip: true }], ['later', 'a:13080', 'desc'],
+      ['maybe', 'a:38796', 'social'], ['no thank you', 'a:5525', 'neg'], ['I\'ll do it', 'a:32751', 'pron'],
+      ['you do it', 'a:6625', 'pron'], ['together', 'a:5367', 'desc'], ['my way', 'a:12264', 'social'],
+      ['my turn', 'a:7158', 'social'], ['your turn', 'a:2608', 'social'], ['stop asking', 'a:7195', 'neg'],
+      ['I need space', 'a:39247', 'social'], ['leave me', 'a:25776', 'neg', { say: 'leave me alone' }], ['I don\'t want to', 'a:21587', 'neg'],
+      ['something else', 'a:17056', 'desc'], ['I\'ve finished', 'a:28429', 'social'], ['wait', 'a:8109', 'verb'],
+      ['help me', 'a:32648', 'verb'], ['I\'m the boss', 'a:2718', 'pron'],
+    ],
+  },
+
+  // Regulation: what helps, and how big a feeling is.
+  needs: {
+    name: 'I need',
+    icon: 'a:3299',
+    stay: true,
+    items: [
+      ['break', 'a:3299', 'noun', { say: 'I need a break', strip: true }], ['quiet', 'a:5936', 'desc', { say: 'I need quiet' }], ['headphones', 'a:5915', 'noun'],
+      ['squeeze', 'a:11180', 'verb'], ['swing', 'a:4608', 'noun'], ['trampoline', 'a:23891', 'noun'],
+      ['dark room', 'a:26993', 'noun'], ['sensory room', 'a:8217', 'noun'], ['cuddle', 'a:6023', 'verb'],
+      ['my space', 'a:39247', 'noun', { say: 'I need my space' }], ['go outside', 'a:2806', 'verb', { say: 'I want to go outside' }], ['water', 'a:2248', 'noun'],
+      ['snack', 'a:28206', 'noun'], ['toilet', 'a:2430', 'noun'], ['too loud', 'a:37857', 'desc', { say: 'it\'s too loud' }],
+      ['too bright', 'a:6015', 'desc', { say: 'it\'s too bright' }], ['too busy', 'a:38445', 'desc', { say: 'it\'s too busy' }], ['too hot', 'a:2300', 'desc', { say: 'I\'m too hot' }],
+      ['too cold', 'a:35557', 'desc', { say: 'I\'m too cold' }], ['calm down', 'a:31310', 'verb'], ['a little', 'a:4716', 'desc'],
+      ['a lot', 'a:7168', 'desc'], ['really big', 'a:4658', 'desc'],
+    ],
+  },
+
+  // Humour and play keep the pressure low.
+  funny: {
+    name: 'Funny',
+    icon: 'a:30393',
+    stay: true,
+    items: [
+      ['that\'s funny', 'a:30393', 'social'], ['silly', 'a:35555', 'desc'], ['joke', 'a:21537', 'noun'],
+      ['tickle', 'a:5480', 'verb'], ['uh oh', 'a:39248', 'social'], ['oops', 'a:39248', 'social'],
+      ['wow', 'a:9038', 'social'], ['yuck', 'a:32338', 'social'], ['ha ha', 'a:35555', 'social'],
+      ['again', 'a:37163', 'social'], ['cheeky', 'a:31416', 'desc'], ['boo', 'a:6916', 'social'],
+      ['peekaboo', 'a:6493', 'social'], ['funny face', 'a:31915', 'noun'], ['messy', 'a:36633', 'desc'],
+      ['surprise', 'a:8517', 'noun'],
+    ],
+  },
+
+  // Time and routine words for first/then, today and the week.
+  time: {
+    name: 'Time',
+    icon: 'a:22633',
+    stay: true,
+    items: [
+      ['now', 'a:13026', 'desc'], ['later', 'a:13080', 'desc'], ['first', 'a:4726', 'desc'],
+      ['then', 'a:13080', 'desc'], ['next', 'a:27331', 'desc'], ['after', 'a:7818', 'desc'],
+      ['finished', 'a:28429', 'desc'], ['soon', 'a:22633', 'desc'], ['today', 'a:7131', 'noun'],
+      ['tomorrow', 'a:7152', 'noun'], ['yesterday', 'a:6926', 'noun'], ['morning', 'a:25704', 'noun'],
+      ['afternoon', 'a:7268', 'noun'], ['night', 'a:7181', 'noun'], ['weekend', 'a:27329', 'noun'],
+      ['Monday', 'a:37730', 'noun'], ['Tuesday', 'a:37730', 'noun'], ['Wednesday', 'a:37730', 'noun'],
+      ['Thursday', 'a:37730', 'noun'], ['Friday', 'a:37730', 'noun'], ['Saturday', 'a:37730', 'noun'],
+      ['Sunday', 'a:37730', 'noun'], ['school day', 'a:3082', 'noun'], ['home time', 'a:16805', 'noun'],
+      ['bedtime', 'a:2304', 'noun'],
+    ],
+  },
+
+  // For new staff and visitors. Edit the words to fit Robyn.
+  aboutme: {
+    name: 'About me',
+    icon: 'a:6009',
+    stay: true,
+    items: [
+      ['Hello, I\'m Robyn', 'a:6009', 'social', { say: 'Hello, my name is Robyn.' }], ['I\'m 10', 'a:29254', 'pron', { say: 'I am ten years old.' }], ['I talk with my iPad', 'a:28099', 'pron', { say: 'I talk with my iPad. Please wait while I find my words.' }],
+      ['I sign too', 'a:11754', 'pron', { say: 'I use signs too.' }], ['give me time', 'a:8109', 'social', { say: 'Please give me time to answer.' }], ['I understand', 'a:11697', 'pron', { say: 'I understand more than I can say.' }],
+      ['show me', 'a:11308', 'verb', { say: 'Show me, please.' }], ['let me choose', 'a:30510', 'social', { say: 'Please let me choose.' }], ['talk to me', 'a:3345', 'social', { say: 'Please talk to me, not about me.' }],
+      ['I need breaks', 'a:3299', 'pron', { say: 'Sometimes I need a break.' }], ['when I\'m upset', 'a:11959', 'pron', { say: 'When I\'m upset, please give me space and keep it calm and quiet.' }], ['ask me', 'a:9843', 'social', { say: 'Please ask me.' }],
     ],
   },
 };

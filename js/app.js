@@ -11,7 +11,7 @@ import { VERSION, BUILT } from './version.js';
 import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 10; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored, 9 = 5 × 4 grid, 10 = Describe/Body/Animals/Colours in the column
+const STATE_VERSION = 11; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored, 9 = 5 × 4 grid, 10 = Describe/Body/Animals/Colours in the column, 11 = My choice, I need, Funny, Time, About me + more words
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -70,12 +70,14 @@ function loadState() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY));
     if (raw && raw.pages && raw.pages[HOME]) {
-      const removed = upgradePages(raw.pages, raw.version || 1);
+      const removed = upgradePages(raw.pages, raw.version || 1, raw.deleted || {});
       raw.deleted = { ...raw.deleted, ...Object.fromEntries(removed.map((id) => [id, Date.now()])) };
       if ((raw.version || 1) < 5) raw.settings = upgradeSettingsToNav(raw.settings || {}, raw.pages);
       raw.settings = upgradeLook(raw.settings || {}, raw.version || 1);
       const nav10 = addV10Nav(raw.settings, raw.pages, raw.version || 1);
       if (nav10) { raw.settings = nav10; raw.settingsAt = Date.now(); }
+      const nav11 = addV11Nav(raw.settings, raw.pages, raw.version || 1);
+      if (nav11) { raw.settings = nav11; raw.settingsAt = Date.now(); }
       return {
         pages: raw.pages,
         settings: { ...DEFAULT_SETTINGS, ...raw.settings },
@@ -114,7 +116,7 @@ function replaceBoard(pages, settings) {
 
 // Older boards (and backups) used Mulberry pictures. Swap the ones nobody has
 // changed for their ARASAAC versions; leave edited buttons alone.
-function upgradePages(pages, version) {
+function upgradePages(pages, version, deleted = {}) {
   if (version < 2) {
     for (const page of Object.values(pages)) {
       for (const item of page.items) {
@@ -126,7 +128,31 @@ function upgradePages(pages, version) {
   if (version < 4) addMissingPages(pages);
   const removed = version < 5 ? movePagesToSideColumn(pages, DEFAULT_NAV) : version < 10 ? movePagesToSideColumn(pages, NAV_V10) : [];
   if (version < 8) markStripWords(pages);
+  if (version < 11) addNewWords(pages, deleted);
   return removed;
+}
+
+// v11: new pages (My choice, I need, Funny, Time, About me) and new words on
+// existing pages. Only ever adds: new buttons go at the end of a page so
+// nothing Robyn knows moves, and a word someone deleted (or already moved to
+// another page) isn't put back. Stamped as just changed so sharing keeps them.
+function addNewWords(pages, deleted) {
+  const at = Date.now();
+  const defaults = buildDefaultPages();
+  const everywhere = new Set(Object.values(pages).flatMap((p) => p.items.map((it) => it.id)));
+  for (const [id, page] of Object.entries(defaults)) {
+    if (!pages[id]) {
+      if (deleted['page:' + id]) continue;
+      pages[id] = { ...page, updatedAt: at, items: page.items.map((it) => ({ ...it, updatedAt: at })) };
+      continue;
+    }
+    const mine = pages[id];
+    const labels = new Set(mine.items.map((it) => it.label.toLowerCase()));
+    const add = page.items.filter((it) => !everywhere.has(it.id) && !deleted[it.id] && !labels.has(it.label.toLowerCase()));
+    if (!add.length) continue;
+    mine.items.push(...add.map((it) => ({ ...it, updatedAt: at })));
+    mine.orderAt = at;
+  }
 }
 
 // v6/v8: mark the starting core words (by word, on Home) for the core strip.
@@ -173,6 +199,35 @@ function addV10Nav(settings, pages, version) {
   nav.forEach((id, i) => { if (DEFAULT_NAV.includes(id)) at = i + 1; });
   nav.splice(at, 0, ...add);
   return { ...settings, nav };
+}
+
+// v11: My choice and I need go in the column after Feelings (in the Everyday
+// set, and the old single column for older copies of TapTalk).
+const NAV_V11 = ['needs', 'choice'];
+function addV11Nav(settings, pages, version) {
+  if (version >= 11 || version < 5) return null;
+  const place = (nav) => {
+    const add = NAV_V11.filter((id) => pages[id] && !nav.includes(id));
+    if (!add.length) return null;
+    const out = [...nav];
+    const f = out.indexOf('feelings');
+    out.splice(f >= 0 ? f + 1 : out.length, 0, ...add);
+    return out;
+  };
+  let changed = false;
+  const next = { ...settings };
+  const nav = place(settings.nav || []);
+  if (nav) { next.nav = nav; changed = true; }
+  if (Array.isArray(settings.sets)) {
+    next.sets = settings.sets.map((x) => {
+      if (x.id !== 's-everyday') return x;
+      const n = place(x.nav || []);
+      if (!n) return x;
+      changed = true;
+      return { ...x, nav: n };
+    });
+  }
+  return changed ? next : null;
 }
 
 // v7: buttons became flat (no outline, slightly rounded). Boards still on the
@@ -1615,9 +1670,11 @@ $('importFile').addEventListener('change', async (e) => {
     if (!confirm('Replace this board with the backup?')) return;
     await photos.clear();
     await photos.importAll(data.photos || {});
-    upgradePages(data.pages, data.stateVersion || 1);
-    const imported = upgradeLook((data.stateVersion || 1) < 5 ? upgradeSettingsToNav(data.settings || {}, data.pages) : data.settings || {}, data.stateVersion || 1);
-    replaceBoard(data.pages, { ...DEFAULT_SETTINGS, ...(addV10Nav(imported, data.pages, data.stateVersion || 1) || imported) });
+    upgradePages(data.pages, data.stateVersion || 1, data.deleted || {});
+    let imported = upgradeLook((data.stateVersion || 1) < 5 ? upgradeSettingsToNav(data.settings || {}, data.pages) : data.settings || {}, data.stateVersion || 1);
+    imported = addV10Nav(imported, data.pages, data.stateVersion || 1) || imported;
+    imported = addV11Nav(imported, data.pages, data.stateVersion || 1) || imported;
+    replaceBoard(data.pages, { ...DEFAULT_SETTINGS, ...imported });
     markChanged();
     save();
     $('settings').close();
@@ -1737,14 +1794,15 @@ function applyPendingBoard(force = false) {
   const version = pendingBoard.stateVersion || STATE_VERSION;
   pendingBoard = null;
   const before = state.settings.skin;
-  const moved = upgradePages(board.pages, version);
+  const moved = upgradePages(board.pages, version, board.deleted || {});
   state.pages = board.pages;
   state.deleted = { ...board.deleted, ...Object.fromEntries(moved.map((id) => [id, now()])) };
   const keep = Object.fromEntries(sync.LOCAL_SETTINGS.map((k) => [k, state.settings[k]]));
   const settings = upgradeLook(board.settings || {}, version);
   const nav10 = addV10Nav(settings, board.pages, version);
-  state.settings = { ...DEFAULT_SETTINGS, ...(nav10 || settings), ...keep };
-  state.settingsAt = nav10 ? now() : board.settingsAt;
+  const nav11 = addV11Nav(nav10 || settings, board.pages, version);
+  state.settings = { ...DEFAULT_SETTINGS, ...(nav11 || nav10 || settings), ...keep };
+  state.settingsAt = nav10 || nav11 ? now() : board.settingsAt;
   save();
   if (!state.pages[pageId]) { pageId = homeId(); trail = []; }
   render();
