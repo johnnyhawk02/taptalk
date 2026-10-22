@@ -1,8 +1,8 @@
 # TapTalk
 
-A simple picture talker (AAC) for a child who doesn't speak, built as a web app you can install on an iPad. Its pictures are child-friendly [ARASAAC](https://arasaac.org) pictograms, with [Mulberry Symbols](https://mulberrysymbols.org) available too. It works offline once installed.
+A simple picture talker (AAC) for a child who doesn't speak, built as a web app you can install on an iPad or Android tablet. Its pictures are child-friendly [ARASAAC](https://arasaac.org) pictograms, with [Mulberry Symbols](https://mulberrysymbols.org) available too. It works offline once installed.
 
-**Free, with no sign-up.** Open <https://johnnyhawk02.github.io/taptalk/> on the iPad and choose *Share → Add to Home Screen*. There are no accounts: the board, photos and recordings stay on the device, and TapTalk sends nothing about you or your child anywhere. On first start it asks for the child's first name (optional), for the About me page. Use *Settings → Backup → Save backup* now and then to keep a copy, for example in iCloud Drive.
+**Free, with no sign-up.** Open <https://johnnyhawk02.github.io/taptalk/> on an iPad (Safari: *Share → Add to Home Screen*) or an Android tablet (Chrome: *⋮ → Add to Home screen*). There are no accounts: the board, photos and recordings stay on the device, and TapTalk sends nothing about you or your child anywhere. On first start it asks for the child's first name (optional), for the About me page. Use *Settings → Backup → Save backup* now and then to keep a copy, for example in iCloud Drive.
 
 ## What the child sees
 

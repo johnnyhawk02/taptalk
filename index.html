@@ -57,6 +57,7 @@
         <button class="pill" id="settingsFromBanner" aria-label="Settings">⚙ Settings</button>
         <button class="pill" id="compactToggle" hidden>Full-size view</button>
         <button class="pill" id="sendFromBanner" hidden>Send to tablet</button>
+        <button class="pill backup-nudge" id="backupFromBanner" hidden>💾 Back up</button>
         <button class="pill" id="doneEditing">Done</button>
       </div>
     </div>
@@ -195,10 +196,11 @@
       </section>
       <section>
         <h3>Backup</h3>
-        <p class="hint">TapTalk keeps the board on this device only. Save everything (buttons, photos, settings) to a file now and then, for example to iCloud Drive, so nothing is lost if the iPad is lost or reset. Load the file to put the board on another iPad.</p>
+        <p class="hint">TapTalk keeps the board on this device only. Now and then, save everything (buttons, photos, settings) to a file: choose <strong>Save to Files</strong> (iCloud Drive or Google Drive) or <strong>Mail</strong> to email it to yourself.</p>
         <p class="hint" id="lastBackup" role="status"></p>
+        <p class="hint"><strong>To put it back</strong> (or on a new tablet): save the file to Files first (from an email, press and hold the attachment, then Save to Files), then tap <strong>Load backup</strong> here and choose it.</p>
         <div class="btn-row">
-          <button type="button" class="wide-btn ghost" id="exportBtn">Save backup</button>
+          <button type="button" class="wide-btn ghost" id="exportBtn">Save or send backup</button>
           <label class="wide-btn ghost file-btn">Load backup<input type="file" id="importFile" accept="application/json,.json" hidden></label>
         </div>
         <button type="button" class="wide-btn danger" id="resetBtn">Reset to starting board</button>

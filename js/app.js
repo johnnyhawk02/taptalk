@@ -11,6 +11,10 @@ import { VERSION, BUILT } from './version.js';
 import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
+// When this device last saved a backup and last changed the board (see backupDue).
+const BACKUP_KEY = 'taptalk.lastBackup';
+const EDIT_AT_KEY = 'taptalk.lastEdit';
+const BACKUP_EVERY = 30 * 24 * 60 * 60 * 1000;
 const STATE_VERSION = 12; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored, 9 = 5 × 4 grid, 10 = Describe/Body/Animals/Colours in the column, 11 = My choice, I need, Funny, Time, About me + more words, 12 = School split into smaller pages
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
@@ -535,6 +539,7 @@ function render() {
   $('googlePhotos').hidden = !googlePhotosReady();
   const manualSend = syncMode === 'send' || (syncMode === 'both' && !autoSend());
   $('sendFromBanner').hidden = !manualSend;
+  $('backupFromBanner').hidden = !backupDue();
   if (!$('sendFromBanner').disabled) $('sendFromBanner').textContent = sendLabel();
   $('compactToggle').hidden = syncMode !== 'send';
   $('compactToggle').textContent = compactPref() ? 'Full-size view' : 'Smaller view';
@@ -1567,7 +1572,7 @@ function openSettings() {
   fillSyncFields();
   $('installHint').textContent = isStandalone()
     ? 'Installed on this device — works offline.'
-    : 'To install on iPad: open in Safari, tap Share, then "Add to Home Screen".';
+    : 'To install: on iPad, open in Safari, tap Share, then "Add to Home Screen". On Android, open in Chrome, tap ⋮, then "Add to Home screen".';
   openSheet($('settings'));
 }
 
@@ -1725,15 +1730,27 @@ $('resetBtn').addEventListener('click', async () => {
   showWelcome();
 });
 
-// When this device last saved a backup. The board lives only on this device
-// (unless it's linked), so the Backup tab says how long ago that was.
-const BACKUP_KEY = 'taptalk.lastBackup';
+// The board lives only on this device (unless it's linked), so the Backup tab
+// says when this device last saved a backup.
 function showLastBackup() {
   let at = 0;
   try { at = Number(localStorage.getItem(BACKUP_KEY)) || 0; } catch { /* ignore */ }
   $('lastBackup').textContent = at ? `Last backup from this device: ${new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'No backup saved from this device yet.';
 }
 showLastBackup();
+
+// A grown-up sees "Back up" in the editing bar when this device has changes
+// newer than its last backup, a month or more after that backup (or with none
+// yet). Linked devices don't: their board is kept in the shared repository.
+function backupDue() {
+  if (sync.config().mode !== 'off') return false;
+  try {
+    const backup = Number(localStorage.getItem(BACKUP_KEY)) || 0;
+    const edit = Number(localStorage.getItem(EDIT_AT_KEY)) || 0;
+    return edit > backup && Date.now() - backup > BACKUP_EVERY;
+  } catch { return false; }
+}
+$('backupFromBanner').addEventListener('click', () => $('exportBtn').click());
 
 // First start (and after a reset): who the board is for. Optional; the name
 // goes into About me ("Hello, I'm …").
@@ -1763,6 +1780,7 @@ $('exportBtn').addEventListener('click', async () => {
   const file = new File([blob], name, { type: 'application/json' });
   try { localStorage.setItem(BACKUP_KEY, String(Date.now())); } catch { /* ignore */ }
   showLastBackup();
+  render();
   // iPad: the share sheet lets you save to Files, AirDrop or email it.
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file], title: 'TapTalk backup' }); return; } catch (err) { if (err.name === 'AbortError') return; }
@@ -1815,8 +1833,10 @@ function autoSend(c = sync.config()) {
 }
 const sendLabel = () => (sync.config().mode === 'send' ? 'Send to tablet' : 'Send changes');
 
-// Called after every board edit: remember there's something to share.
+// Called after every board edit: remember there's something to share (and,
+// for the backup reminder, when this device last changed the board).
 function markChanged() {
+  try { localStorage.setItem(EDIT_AT_KEY, String(Date.now())); } catch { /* ignore */ }
   recordNewWords();
   const m = sync.config().mode;
   if (m === 'send' || m === 'both') sync.setConfig({ unsent: true });

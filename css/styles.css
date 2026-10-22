@@ -613,3 +613,6 @@ dialog.sheet.video-sheet { width: calc(100vw - 24px); height: calc(100dvh - 24px
 /* First-start welcome */
 .welcome-body { padding: 4px 20px 10px; }
 .welcome-body input { font-size: 1.2rem; }
+
+/* "Back up" in the editing bar, when a backup is due */
+.edit-banner .backup-nudge { background: #fff1b8; border-color: #d9a400; }
