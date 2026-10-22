@@ -2,7 +2,6 @@ importScripts('precache.js');
 
 const SHELL = 'taptalk-' + self.CACHE_VERSION;
 const SYMBOLS = 'taptalk-symbols'; // kept across updates
-const VOICES = 'taptalk-voices'; // natural voices, kept across updates (filled by js/piper.js)
 const NETWORK_WAIT_MS = 3000;
 
 // The app's own files must all arrive for a new version to take over
@@ -31,7 +30,7 @@ async function fillSymbols() {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     for (const key of await caches.keys()) {
-      if (key !== SHELL && key !== SYMBOLS && key !== VOICES) await caches.delete(key);
+      if (key !== SHELL && key !== SYMBOLS) await caches.delete(key); // incl. old downloaded voices
     }
     await self.clients.claim();
   })());
@@ -81,7 +80,5 @@ self.addEventListener('fetch', (event) => {
   const toned = url.origin === 'https://api.arasaac.org' && url.pathname.startsWith('/v1/pictograms/') && url.searchParams.has('skin');
   if (toned) { event.respondWith(cacheFirst(req, true)); return; }
   if (url.origin !== location.origin) return;
-  // The voice engine is big and kept in its own cache by js/piper.js.
-  if (url.pathname.includes('/vendor/piper/')) return;
   event.respondWith(url.pathname.includes('/symbols/') ? cacheFirst(req, false) : networkFirst(req));
 });

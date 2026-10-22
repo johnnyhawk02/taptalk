@@ -89,7 +89,7 @@
       btn.disabled = true;
       btn.textContent = 'Updating…';
       // Keep the pictures and downloaded voices; only the app's own files go.
-      const keep = ['taptalk-symbols', 'taptalk-voices'];
+      const keep = ['taptalk-symbols'];
       for (const k of await caches.keys()) if (k.startsWith('taptalk-') && !keep.includes(k)) await caches.delete(k);
       try {
         const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });

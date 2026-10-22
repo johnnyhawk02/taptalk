@@ -10,7 +10,7 @@ import { DEFAULT_PAGES } from '../js/board.js';
 
 const shell = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
-  'js/app.js', 'js/board.js', 'js/photos.js', 'js/gphotos.js', 'js/config.js', 'js/migrate.js', 'js/sync.js', 'js/cropper.js', 'js/sheet.js', 'js/merge.js', 'js/piper.js', 'js/piper-worker.js', 'js/aipics.js', 'js/clips.js', 'repair.html', 'symbols/index.json',
+  'js/app.js', 'js/board.js', 'js/photos.js', 'js/gphotos.js', 'js/config.js', 'js/migrate.js', 'js/sync.js', 'js/cropper.js', 'js/sheet.js', 'js/merge.js', 'js/aipics.js', 'js/clips.js', 'repair.html', 'symbols/index.json',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 const syms = new Set(readdirSync('symbols/custom').map((f) => 'symbols/custom/' + f));
@@ -20,6 +20,8 @@ for (const page of Object.values(DEFAULT_PAGES)) {
     if (sym.startsWith('a:')) syms.add('symbols/arasaac/' + encodeURIComponent(sym.slice(2)) + '.png');
   }
 }
+// The built-in voice: every starting-board word's recording.
+for (const f of readdirSync('symbols/voice/coral')) syms.add('symbols/voice/coral/' + f);
 const symbols = [...syms].sort();
 const files = [...shell, ...symbols];
 

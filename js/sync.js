@@ -164,6 +164,7 @@ export async function syncClips(words, { progress = () => {} } = {}) {
   for (const word of words) {
     const name = await clips.fileName(word);
     const here = await clips.has(clips.VOICE, word);
+    if (await clips.isBundled(word)) continue; // built into TapTalk already
     if (!here && remote.has(name)) {
       const res = await gh(`${dir}/${name}`, { raw: true });
       if (res) { await clips.putData(clips.VOICE, word, await res.arrayBuffer()); got++; progress(got, sent); }

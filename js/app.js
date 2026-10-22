@@ -6,7 +6,6 @@ import * as sync from './sync.js';
 import { editPicture, initCropper } from './cropper.js';
 import { openSheet } from './sheet.js';
 import { merge, fingerprint } from './merge.js';
-import * as piper from './piper.js';
 import * as clips from './clips.js';
 import * as ai from './aipics.js';
 
@@ -336,89 +335,46 @@ function prefetchToned() {
 }
 
 // ---------- Speech ----------
+// TapTalk has one voice, built in: Coral, a recorded AI voice. Every button's
+// words are recordings (the starting board's ship with the app; others come
+// with the shared board), and a sentence plays its words' recordings in turn.
+// The iPad's own voice is only a backup, for a brand-new word not yet recorded.
 
 let voices = [];
 
 function loadVoices() {
   if (!('speechSynthesis' in window)) return;
   voices = speechSynthesis.getVoices().filter((v) => v.lang.startsWith('en'));
-  voices.sort((a, b) => scoreVoice(b) - scoreVoice(a) || a.name.localeCompare(b.name));
-  fillVoiceSelect();
+  // The backup: a British English voice on the iPad, the best quality first.
+  const score = (v) => (/GB/.test(v.lang) ? 4 : 0) + (v.localService ? 2 : 0) + (/premium|enhanced/i.test(v.voiceURI) ? 1 : 0);
+  voices.sort((a, b) => score(b) - score(a));
 }
-
-// Apple gives every quality of a voice the same name ("Stephanie"); the
-// quality is only in its voiceURI (com.apple.voice.premium.en-GB.Stephanie).
-function voiceQuality(v) {
-  const m = /premium|enhanced|natural/i.exec(v.voiceURI + ' ' + v.name);
-  return m ? m[0][0].toUpperCase() + m[0].slice(1).toLowerCase() : '';
-}
-
-function scoreVoice(v) {
-  let s = 0;
-  if (v.lang === 'en-GB' || v.lang === 'en_GB') s += 4;
-  if (v.localService) s += 2;
-  s += { Premium: 3, Natural: 3, Enhanced: 2 }[voiceQuality(v)] || 0;
-  return s;
-}
-
-// The iPad voice used when the chosen voice is an iPad one, and as the backup
-// while a natural (Piper) voice isn't downloaded or ready yet.
-function currentVoice() {
-  return voices.find((v) => v.voiceURI === state.settings.voice) || voices[0] || null;
-}
-
-// Natural voices on this device: id -> 'ready' | 'downloaded' | progress (0–1).
-const piperState = {};
-const voiceTrouble = new Set();
+const backupVoice = () => voices[0] || null;
 
 function stopSpeaking() {
-  piper.stop();
   clips.stop();
   if ('speechSynthesis' in window) speechSynthesis.cancel();
 }
 
-// text: what to say, or a sentence's words (a recorded voice plays each word's
-// recording in turn).
+// text: what to say, or a sentence's words (each word's recording in turn).
 function speak(textOrWords) {
   const words = (Array.isArray(textOrWords) ? textOrWords : [textOrWords]).filter(Boolean);
   const text = words.join(' ');
   if (!text) return Promise.resolve();
-  const id = state.settings.voice;
-  if (clips.isRec(id)) {
-    piper.stop();
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
-    // A word with no recording yet (offline) falls back to the iPad voice.
-    return clips.speak(id, words).then((ok) => (ok ? undefined : speakOnDevice(text))).catch(() => speakOnDevice(text));
-  }
-  if (piper.isPiper(id) && piperState[id] === 'ready') {
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
-    return piper.speak(id, text, state.settings).catch(() => speakOnDevice(text));
-  }
-  if (piper.isPiper(id) && piperState[id] === 'downloaded' && voiceTrouble.has(id)) prepareVoice(id); // try again in the background
-  else if (piper.isPiper(id) && piperState[id] === 'downloaded') {
-    // Still loading (just after opening): wait a moment rather than switch to
-    // the iPad voice, so Robyn always hears the same voice.
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
-    piper.unlock();
-    prepareVoice(id);
-    const waited = Promise.race([piper.prepare(id).then(() => true), new Promise((r) => setTimeout(r, 3000, false))]);
-    return waited.then((ready) => (ready ? piper.speak(id, text, state.settings) : speakOnDevice(text)))
-      .catch(() => speakOnDevice(text));
-  }
-  return speakOnDevice(text);
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  // A word with no recording yet (offline) falls back to the iPad voice.
+  return clips.speak(clips.VOICE, words).then((ok) => (ok ? undefined : speakOnDevice(text))).catch(() => speakOnDevice(text));
 }
 
 function speakOnDevice(text) {
-  piper.stop();
   clips.stop();
   if (!('speechSynthesis' in window)) return Promise.resolve();
   speechSynthesis.cancel();
   return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text);
-    const v = currentVoice();
+    const v = backupVoice();
     if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = 'en-GB'; }
-    u.rate = state.settings.rate;
-    u.pitch = state.settings.pitch;
+    u.rate = 0.9;
     u.onend = u.onerror = () => resolve();
     speechSynthesis.speak(u);
   });
@@ -1465,9 +1421,7 @@ function openSettings() {
   $('setAutoHome').checked = s.autoHome;
   $('setDebounce').value = String(s.debounce);
   $('setSpeakTap').checked = s.speakOnTap;
-  $('setRate').value = s.rate;
-  $('setPitch').value = s.pitch;
-  fillVoiceSelect();
+  showVoiceStatus();
   renderSwatches();
   fillSyncFields();
   $('installHint').textContent = isStandalone()
@@ -1476,102 +1430,25 @@ function openSettings() {
   openSheet($('settings'));
 }
 
-function fillVoiceSelect() {
-  const sel = $('setVoice');
-  const chosen = state.settings.voice;
-  const cur = piper.isPiper(chosen) || clips.isRec(chosen) ? null : currentVoice();
-  const recorded = document.createElement('optgroup');
-  recorded.label = 'Recorded AI voices (record once, work offline)';
-  recorded.append(...clips.VOICES.map((v) => new Option(`${v.name} – ${v.about}`, v.id, false, v.id === chosen)));
-  const natural = document.createElement('optgroup');
-  natural.label = 'Natural voices (download once, work offline)';
-  natural.append(...piper.VOICES.map((v) => new Option(`${v.name} – ${v.about}`, v.id, false, v.id === chosen)));
-  const device = document.createElement('optgroup');
-  device.label = 'iPad voices';
-  device.append(...voices.map((v) => new Option(`${v.name}${voiceQuality(v) && !/premium|enhanced|natural/i.test(v.name) ? ' – ' + voiceQuality(v) : ''} (${v.lang.replace('_', '-')})`, v.voiceURI, false, v === cur)));
-  if (!voices.length) device.append(new Option('Default voice', '', false, !piper.isPiper(chosen) && !clips.isRec(chosen)));
-  sel.replaceChildren(recorded, natural, device);
-  showVoiceStatus();
-}
-
-// ---------- Natural voices: download, get ready, say how it's going ----------
-
-async function checkVoice(id) {
-  if (!piper.isPiper(id) || piperState[id] !== undefined) return;
-  if (await piper.downloaded(id)) piperState[id] ??= 'downloaded';
-  showVoiceStatus();
-}
-
-function prepareVoice(id) {
-  if (piperState[id] !== 'downloaded') return;
-  voiceTrouble.delete(id);
-  piper.prepare(id).then(() => {
-    piperState[id] = 'ready';
-    warmPage();
-  }).catch(() => { voiceTrouble.add(id); /* stays on the iPad voice; tried again on the next tap */ })
-    .finally(showVoiceStatus);
-  showVoiceStatus();
-}
+// ---------- The voice: keep every button's words recorded ----------
 
 async function showVoiceStatus() {
-  const id = state.settings.voice;
   const text = $('voiceStatusText');
   const btn = $('voiceDownload');
   btn.hidden = true;
-  if (clips.isRec(id)) {
-    if (!ai.key()) {
-      const words = boardWords();
-      const n = await clips.count(id, words);
-      text.textContent = n ? `${n} of ${words.length} words recorded (AI voice), shared from the other device.` : 'Recordings come from the other device when it shares, or add the OpenAI key (Pictures tab) to record here.';
-      return;
-    }
-    if (recording) { text.textContent = `Recording words… ${recording.done} of ${recording.total}`; return; }
-    const words = boardWords();
-    const n = await clips.count(id, words);
-    if (state.settings.voice !== id || recording) return;
-    text.textContent = n === words.length
-      ? `All ${n} words recorded (AI voice). Works offline.`
-      : `${n} of ${words.length} words recorded (AI voice). ${recordError || 'Unrecorded words use the iPad voice when offline.'}`;
-    btn.textContent = 'Record words';
-    btn.hidden = n === words.length;
-    return;
-  }
-  btn.textContent = 'Download';
-  if (!piper.isPiper(id)) {
-    text.textContent = 'Tip: the recorded voices sound best.';
-    return;
-  }
-  const st = piperState[id];
-  if (typeof st === 'number') text.textContent = `Downloading… ${Math.round(st * 100)}%`;
-  else if (st === 'ready') text.textContent = 'Ready. Works offline.';
-  else if (st === 'downloaded') text.textContent = voiceTrouble.has(id) ? 'This voice won\'t start here; the iPad voice speaks.' : 'Getting the voice ready…';
-  else if (st === 'failed') { text.textContent = 'Download stopped. Check the Wi-Fi and try again.'; btn.hidden = false; }
-  else {
-    if (!('caches' in window)) { text.textContent = 'This browser can\'t keep voices. The iPad voice is used.'; return; }
-    const mb = await piper.downloadSize(id);
-    if (state.settings.voice !== id || piperState[id] !== undefined) return;
-    text.textContent = `One-off download, ${mb} MB. Until then, the iPad voice speaks.`;
-    btn.hidden = false;
-  }
+  if (recording) { text.textContent = `Recording new words… ${recording.done} of ${recording.total}`; return; }
+  const words = boardWords();
+  const n = await clips.count(clips.VOICE, words);
+  if (recording) return;
+  const left = words.length - n;
+  if (!left) { text.textContent = `Coral, a recorded AI voice. All ${n} words ready, offline too.`; return; }
+  text.textContent = `Coral, a recorded AI voice. ${left} new word${left === 1 ? '' : 's'} still to record`
+    + (ai.key() ? (recordError ? `: ${recordError}` : '.') : ': they come from the other device, or add the OpenAI key (Pictures tab) to record here.');
+  btn.textContent = 'Record now';
+  btn.hidden = !ai.key();
 }
 
-$('voiceDownload').addEventListener('click', async () => {
-  const id = state.settings.voice;
-  if (clips.isRec(id)) { recordWords(id); return; }
-  if (!piper.isPiper(id) || typeof piperState[id] === 'number') return;
-  piperState[id] = 0;
-  showVoiceStatus();
-  try {
-    await piper.download(id, (f) => { piperState[id] = f; if (state.settings.voice === id) showVoiceStatus(); });
-    piperState[id] = 'downloaded';
-    prepareVoice(id);
-  } catch {
-    piperState[id] = 'failed';
-  }
-  showVoiceStatus();
-});
-
-// ---------- Recorded voice: keep every button's words recorded ----------
+$('voiceDownload').addEventListener('click', () => recordWords());
 
 // Every word or phrase a button says, across the whole board.
 function boardWords() {
@@ -1582,17 +1459,19 @@ function boardWords() {
   return [...out];
 }
 
+// Words without a recording (new buttons) are recorded on a device that has
+// the OpenAI key, and shared with the board.
 let recording = null; // { done, total } while recording
 let recordError = '';
-async function recordWords(id) {
-  if (recording || !clips.isRec(id) || !ai.key() || !navigator.onLine) return;
+async function recordWords() {
+  if (recording || !ai.key() || !navigator.onLine) return;
   const words = boardWords();
-  const missing = words.length - await clips.count(id, words);
+  const missing = words.length - await clips.count(clips.VOICE, words);
   if (!missing) return;
   recording = { done: 0, total: missing };
   recordError = '';
   showVoiceStatus();
-  const result = await clips.recordAll(id, words, (done) => { recording.done = done; if ($('settings').open) showVoiceStatus(); });
+  const result = await clips.recordAll(clips.VOICE, words, (done) => { recording.done = done; if ($('settings').open) showVoiceStatus(); });
   recording = null;
   if (result.firstError) recordError = result.firstError;
   if (result.done) shareRecordings();
@@ -1604,23 +1483,13 @@ async function recordWords(id) {
 let recordTimer = 0;
 function recordNewWords() {
   clearTimeout(recordTimer);
-  recordTimer = setTimeout(() => recordWords(state.settings.voice), 3000);
+  recordTimer = setTimeout(recordWords, 3000);
 }
 
-// Make the words on screen ahead of time, so taps speak instantly.
+// Get the words on screen ready ahead of time, so taps play instantly.
 function warmPage() {
-  const id = state.settings.voice;
-  if (clips.isRec(id)) {
-    const page = state.pages[pageId] || state.pages[homeId()];
-    clips.warm(id, [...page.items, ...stripItems().map(({ it }) => it)].filter((it) => !it.hidden && it.type !== 'folder').map((it) => it.say || it.label));
-    return;
-  }
-  if (!piper.isReady(id)) return;
   const page = state.pages[pageId] || state.pages[homeId()];
-  const words = [...page.items, ...stripItems().map(({ it }) => it)]
-    .filter((it) => !it.hidden && it.type !== 'folder')
-    .map((it) => it.say || it.label);
-  piper.warm(id, words, state.settings);
+  clips.warm(clips.VOICE, [...page.items, ...stripItems().map(({ it }) => it)].filter((it) => !it.hidden && it.type !== 'folder').map((it) => it.say || it.label));
 }
 
 function renderSwatches() {
@@ -1654,15 +1523,6 @@ bindSetting('setLabels', 'labels', (el) => el.checked);
 bindSetting('setAutoHome', 'autoHome', (el) => el.checked);
 bindSetting('setDebounce', 'debounce', (el) => Number(el.value));
 bindSetting('setSpeakTap', 'speakOnTap', (el) => el.checked);
-bindSetting('setVoice', 'voice', (el) => el.value);
-$('setVoice').addEventListener('change', () => {
-  const id = state.settings.voice;
-  showVoiceStatus();
-  if (clips.isRec(id)) { recordWords(id); return; }
-  checkVoice(id).then(() => prepareVoice(id));
-});
-bindSetting('setRate', 'rate', (el) => Number(el.value));
-bindSetting('setPitch', 'pitch', (el) => Number(el.value));
 
 $('testVoice').addEventListener('click', () => speak('Hello! I want to play.'));
 
@@ -1855,7 +1715,7 @@ async function shareRecordings() {
   sharingClips = true;
   try {
     const { got } = await sync.syncClips(boardWords());
-    if (got && clips.isRec(state.settings.voice)) { warmPage(); if ($('settings').open) showVoiceStatus(); }
+    if (got) { warmPage(); if ($('settings').open) showVoiceStatus(); }
   } catch { /* try again on the next sync */ } finally {
     sharingClips = false;
   }
@@ -2726,13 +2586,10 @@ if ('speechSynthesis' in window) {
   loadVoices();
   speechSynthesis.addEventListener?.('voiceschanged', loadVoices);
 }
-// Get the natural voice ready in the background; the iPad voice covers the
-// first few seconds.
-checkVoice(state.settings.voice).then(() => prepareVoice(state.settings.voice));
 // iPads only let sound start from a tap, so wake the audio on the first one.
-document.addEventListener('pointerdown', () => { const v = state.settings.voice; if (piper.isPiper(v)) piper.unlock(); else if (clips.isRec(v)) clips.unlock(); }, { capture: true });
+document.addEventListener('pointerdown', () => clips.unlock(), { capture: true });
 // Record any words not yet recorded (e.g. buttons added on the other device).
-setTimeout(() => recordWords(state.settings.voice), 4000);
+setTimeout(recordWords, 4000);
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   // updateViaCache 'none': when checking for a new version, fetch the file

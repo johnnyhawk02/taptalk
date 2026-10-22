@@ -43,6 +43,16 @@ async function tx(mode, fn) {
   });
 }
 
+// The starting board's recordings ship with TapTalk (symbols/voice/coral/),
+// so they work straight after install, offline too.
+const BUNDLED = new URL('../symbols/voice/coral/', import.meta.url).href;
+let bundled = null; // file names
+async function bundledFiles() {
+  bundled ??= fetch(BUNDLED + 'index.json').then((r) => (r.ok ? r.json() : [])).then((list) => new Set(list)).catch(() => new Set());
+  return bundled;
+}
+export async function isBundled(text) { return (await bundledFiles()).has(await fileName(text)); }
+
 let have = null; // keys of the recordings on this device
 async function known() {
   if (!have) have = new Set(await tx('readonly', (s) => s.getAllKeys()).catch(() => []));
@@ -68,7 +78,9 @@ export async function putData(voice, text, data) {
 /** How many of these words are recorded in this voice. */
 export async function count(voice, texts) {
   const k = await known();
-  return texts.filter((t) => k.has(keyFor(voice, t))).length;
+  let n = 0;
+  for (const t of texts) if (k.has(keyFor(voice, t)) || await isBundled(t)) n++;
+  return n;
 }
 
 /** Record one word or phrase (needs the internet and the OpenAI key). */
@@ -98,7 +110,8 @@ export async function record(voice, text, signal) {
 /** Record every word not yet recorded, a few at a time. */
 export async function recordAll(voice, texts, progress = () => {}, signal) {
   const k = await known();
-  const todo = [...new Set(texts.map((t) => t.trim()).filter(Boolean))].filter((t) => !k.has(keyFor(voice, t)));
+  const todo = [];
+  for (const t of new Set(texts.map((x) => x.trim()).filter(Boolean))) if (!k.has(keyFor(voice, t)) && !await isBundled(t)) todo.push(t);
   let done = 0;
   let failed = 0;
   let firstError = '';
@@ -163,13 +176,19 @@ function trimSilence(buf) {
 async function bufferFor(voice, text, { record: canRecord = true } = {}) {
   const k = keyFor(voice, text);
   if (decoded.has(k)) return decoded.get(k);
-  if (!(await known()).has(k)) {
+  let data = null;
+  if ((await known()).has(k)) data = (await tx('readonly', (s) => s.get(k)))?.data || null;
+  else if (await isBundled(text)) {
+    const res = await fetch(BUNDLED + await fileName(text)).catch(() => null);
+    if (res?.ok) data = await res.arrayBuffer();
+  }
+  if (!data) {
     if (!canRecord || !navigator.onLine || !ai.key()) return null;
     try { await record(voice, text); } catch { return null; }
+    data = (await tx('readonly', (s) => s.get(k)))?.data || null;
+    if (!data) return null;
   }
-  const v = await tx('readonly', (s) => s.get(k));
-  if (!v) return null;
-  const buf = trimSilence(await ctx.decodeAudioData(v.data.slice(0)));
+  const buf = trimSilence(await ctx.decodeAudioData(data.slice(0)));
   decoded.set(k, buf);
   return buf;
 }
