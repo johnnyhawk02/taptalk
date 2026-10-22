@@ -4,8 +4,11 @@ import { DEFAULT_PAGES, DEFAULT_NAV, DEFAULT_SETS, HOME } from './board.js';
 import { STATE_VERSION, buildDefaultPages, upgradeStored } from './upgrades.js';
 import { VERSION, BUILT } from './version.js';
 import { $, now } from './util.js';
+import { boardStore, idbKv } from './boardstore.js';
 
-const STORE_KEY = 'taptalk.v1';
+// Ask Safari not to clear TapTalk's storage when the iPad runs low on space.
+navigator.storage?.persist?.();
+const store = boardStore({ kv: idbKv(), local: localStorage });
 export const DEFAULT_SKIN = '#ffeec8';
 
 export const DEFAULT_SETTINGS = {
@@ -46,12 +49,16 @@ export function applyChildName(name) {
   }
 }
 
-function loadState() {
+async function loadState() {
+  let lost = false;
   try {
-    const saved = upgradeStored(JSON.parse(localStorage.getItem(STORE_KEY)));
+    const got = await store.load();
+    lost = !!got.lost;
+    const saved = upgradeStored(JSON.parse(got.text));
     if (saved) return { ...saved, settings: { ...DEFAULT_SETTINGS, ...saved.settings } };
   } catch { /* fall through to defaults */ }
-  return { pages: buildDefaultPages(), settings: { ...DEFAULT_SETTINGS }, deleted: {}, settingsAt: 0, fresh: true };
+  // A board that can't be reached right now isn't a new device: no welcome.
+  return { pages: buildDefaultPages(), settings: { ...DEFAULT_SETTINGS }, deleted: {}, settingsAt: 0, ...(lost ? { lost } : { fresh: true }) };
 }
 export const touchSettings = () => { state.settingsAt = now(); };
 
@@ -75,7 +82,7 @@ export function replaceBoard(pages, settings) {
   state.settingsAt = at;
 }
 
-export const state = loadState();
+export const state = await loadState();
 
 // ---------- Page sets ----------
 // A set is a named list of pages for the left-hand column, with its own Home
@@ -117,19 +124,20 @@ export const ui = {
   trail: [],
 };
 
+let saving = Promise.resolve();
 export function save() {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({
-      version: STATE_VERSION, pages: state.pages, settings: state.settings, deleted: state.deleted, settingsAt: state.settingsAt,
-    }));
-  } catch (err) {
-    alert('Could not save changes: ' + err.message);
-  }
+  const text = JSON.stringify({
+    version: STATE_VERSION, pages: state.pages, settings: state.settings, deleted: state.deleted, settingsAt: state.settingsAt,
+  });
+  saving = store.save(text).catch((err) => alert('Could not save changes: ' + err.message));
 }
+// Resolves once the last change is stored (e.g. before reloading).
+export const whenSaved = () => saving;
 
 export function init() {
   // While TapTalk is being developed, show which version is running.
   $('appVersion').textContent = `v ${VERSION} · ${BUILT}`;
   $('aboutVersion').textContent = `TapTalk version ${VERSION} (${BUILT}).`;
+  if (state.lost) alert("TapTalk couldn't open the saved board just now. Close TapTalk fully and open it again to get it back.");
   if (state.upgraded) { delete state.upgraded; save(); }
 }
