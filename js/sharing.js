@@ -55,6 +55,9 @@ export function fillSyncFields() {
 let pendingBoard = null;
 let syncing = false;
 
+// How long to wait before trying again when it isn't safe to swap.
+export const SWAP_RETRY_MS = 20_000;
+
 // Only swap the board when Robyn isn't in the middle of something.
 export function safeToSwap() {
   return !ui.editing && ui.sentence.length === 0 && !document.querySelector('dialog[open]');
@@ -104,7 +107,7 @@ export async function shareRecordings() {
 
 export function applyPendingBoard(force = false) {
   if (!pendingBoard) return;
-  if (!force && !safeToSwap()) { setTimeout(applyPendingBoard, 20_000); return; }
+  if (!force && !safeToSwap()) { setTimeout(applyPendingBoard, SWAP_RETRY_MS); return; }
   // Merge again with the board as it is now, so nothing edited in the
   // meantime is lost (except on first link, when this device takes the
   // shared board as it is).

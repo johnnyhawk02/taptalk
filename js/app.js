@@ -8,7 +8,7 @@ import { render, renderStrip, init as renderInit } from './render.js';
 import { showWelcome, init as settingsInit } from './settings.js';
 import { recordWords, init as voiceInit } from './voice.js';
 import { EDIT_KEY, init as editmodeInit } from './editmode.js';
-import { safeToSwap, syncTick, init as sharingInit } from './sharing.js';
+import { SWAP_RETRY_MS, safeToSwap, syncTick, init as sharingInit } from './sharing.js';
 import { openEditor, pickFromGoogle, init as editorInit } from './editor.js';
 import { init as pagesInit } from './pages.js';
 import { init as interactionInit } from './interaction.js';
@@ -19,6 +19,9 @@ import { init as clipboardInit } from './clipboard.js';
 import { init as undoInit } from './undo.js';
 import { init as pickerInit } from './picker.js';
 import { init as speechInit } from './speech.js';
+
+const RECORD_AFTER_MS = 4000;      // record missing words this long after start-up
+const SYNC_EVERY_MS = 5 * 60_000;  // check for a shared board this often
 
 stateInit();
 renderInit();
@@ -36,8 +39,9 @@ clipboardInit();
 undoInit();
 pickerInit();
 speechInit();
+
 // Record any words not yet recorded (e.g. buttons added on the other device).
-setTimeout(recordWords, 4000);
+setTimeout(recordWords, RECORD_AFTER_MS);
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   // updateViaCache 'none': when checking for a new version, fetch the file
@@ -48,7 +52,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   if (navigator.serviceWorker.controller) {
     navigator.serviceWorker.addEventListener('controllerchange', function reloadWhenSafe() {
       if (safeToSwap()) location.reload();
-      else setTimeout(reloadWhenSafe, 20_000);
+      else setTimeout(reloadWhenSafe, SWAP_RETRY_MS);
     });
   }
 }
@@ -61,7 +65,7 @@ renderStrip();
 if (state.fresh) showWelcome();
 
 syncTick();
-setInterval(syncTick, 5 * 60_000);
+setInterval(syncTick, SYNC_EVERY_MS);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncTick(); });
 
 // Back from Google sign-in: reopen the editor where we left it and carry on.

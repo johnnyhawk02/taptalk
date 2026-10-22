@@ -33,9 +33,10 @@ export function goBack() {
   render();
 }
 
+const FLASH_MS = 140; // how long a tapped button shows as pressed
 function flash(el) {
   el.classList.add('pressed');
-  setTimeout(() => el.classList.remove('pressed'), 140);
+  setTimeout(() => el.classList.remove('pressed'), FLASH_MS);
 }
 
 // A word or page button was tapped (on the grid, or in the core strip).
