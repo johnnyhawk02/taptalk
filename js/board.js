@@ -129,24 +129,43 @@ export const DEFAULT_PAGES = {
       ['beach', 'a:2826', 'noun'], ['toilet', 'a:2430', 'noun'], ['sensory room', 'a:8217', 'noun'],
     ],
   },
+  // School is split into small pages so each fits on one screen (v12).
   school: {
     name: 'School',
     stay: true,
     items: [
-      ['school', 'a:3082', 'noun'], ['teacher', 'a:2457', 'pron'], ['friend', 'a:8487', 'pron'],
-      ['classroom', 'a:39686', 'noun'], ['playground', 'a:2859', 'noun'], ['play time', 'a:27339', 'noun'],
-      ['lunch', 'a:4609', 'noun'], ['lunch box', 'a:39457', 'noun'], ['toilet', 'a:2430', 'noun'],
+      F('In class', 'a:2440', 'schoolclass'), F('Lessons', 'a:24795', 'lessons'), F('My day', 'a:9902', 'schoolday'),
+      ['school', 'a:3082', 'noun'], ['teacher', 'a:2457', 'pron'],
+      ['friend', 'a:8487', 'pron'], ['my class', 'a:15734', 'noun'], ['classroom', 'a:39686', 'noun'], ['playground', 'a:2859', 'noun'], ['hall', 'a:38427', 'noun'],
+      ['toilet', 'a:2430', 'noun'], ['my bag', 'a:2475', 'noun'], ['coat', 'a:27978', 'noun'],
+    ],
+  },
+  schoolclass: {
+    name: 'In class',
+    stay: true,
+    items: [
       ['book', 'a:2450', 'noun'], ['pencil', 'a:2440', 'noun'], ['paper', 'a:2398', 'noun'],
       ['scissors', 'a:6664', 'noun'], ['glue', 'a:2510', 'noun'], ['paint', 'a:2348', 'noun'],
-      ['computer', 'a:7190', 'noun'], ['music', 'a:24795', 'noun'], ['PE', 'a:10258', 'noun'],
-      ['story', 'a:8346', 'noun'], ['sit down', 'a:25082', 'verb'], ['line up', 'a:7102', 'verb'],
-      ['my bag', 'a:2475', 'noun'], ['coat', 'a:27978', 'noun'], ['home time', 'a:16805', 'noun'],
-      ['assembly', 'a:39263', 'noun'], ['hall', 'a:38427', 'noun'], ['sensory room', 'a:8217', 'noun'],
-      ['hydro pool', 'a:3142', 'noun'], ['soft play', 'a:8191', 'noun'], ['swimming', 'a:25038', 'noun'],
-      ['cooking', 'a:3235', 'noun'], ['art', 'a:2348', 'noun'], ['speech therapy', 'a:2454', 'noun'],
-      ['OT', 'a:16084', 'noun'], ['physio', 'a:2395', 'noun'], ['taxi', 'a:2580', 'noun'],
-      ['minibus', 'a:35600', 'noun'], ['register', 'a:9902', 'noun'], ['snack time', 'a:24854', 'noun'],
-      ['choosing time', 'a:30510', 'noun'], ['iPad time', 'a:28099', 'noun'], ['my class', 'a:15734', 'noun'],
+      ['computer', 'a:7190', 'noun'], ['iPad time', 'a:28099', 'noun'], ['sit down', 'a:25082', 'verb'], ['line up', 'a:7102', 'verb'],
+    ],
+  },
+  lessons: {
+    name: 'Lessons',
+    stay: true,
+    items: [
+      ['music', 'a:24795', 'noun'], ['PE', 'a:10258', 'noun'], ['story', 'a:8346', 'noun'],
+      ['art', 'a:2348', 'noun'], ['cooking', 'a:3235', 'noun'], ['swimming', 'a:25038', 'noun'],
+      ['hydro pool', 'a:3142', 'noun'], ['soft play', 'a:8191', 'noun'], ['sensory room', 'a:8217', 'noun'],
+      ['speech therapy', 'a:2454', 'noun'], ['OT', 'a:16084', 'noun'], ['physio', 'a:2395', 'noun'],
+    ],
+  },
+  schoolday: {
+    name: 'My day',
+    stay: true,
+    items: [
+      ['taxi', 'a:2580', 'noun'], ['minibus', 'a:35600', 'noun'], ['register', 'a:9902', 'noun'],
+      ['assembly', 'a:39263', 'noun'], ['snack time', 'a:24854', 'noun'], ['play time', 'a:27339', 'noun'],
+      ['lunch', 'a:4609', 'noun'], ['lunch box', 'a:39457', 'noun'], ['choosing time', 'a:30510', 'noun'], ['home time', 'a:16805', 'noun'],
     ],
   },
 

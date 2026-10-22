@@ -11,7 +11,7 @@ import { VERSION, BUILT } from './version.js';
 import * as ai from './aipics.js';
 
 const STORE_KEY = 'taptalk.v1';
-const STATE_VERSION = 11; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored, 9 = 5 × 4 grid, 10 = Describe/Body/Animals/Colours in the column, 11 = My choice, I need, Funny, Time, About me + more words
+const STATE_VERSION = 12; // 2 = ARASAAC pictures, 3 = place pages, 4 = Fun page, 5 = left-hand page column, 6 = core strip, 7 = flat buttons, 8 = core strip words restored, 9 = 5 × 4 grid, 10 = Describe/Body/Animals/Colours in the column, 11 = My choice, I need, Funny, Time, About me + more words, 12 = School split into smaller pages
 const DEFAULT_SKIN = '#ffeec8';
 const SKIN_TONES = ['#ffeec8', '#f6d2a9', '#e0ac7e', '#c08654', '#8d5a33', '#5c3a21'];
 // The ARASAAC server re-draws pictures in these skin tones (names are theirs).
@@ -129,6 +129,57 @@ function upgradePages(pages, version, deleted = {}) {
   const removed = version < 5 ? movePagesToSideColumn(pages, DEFAULT_NAV) : version < 10 ? movePagesToSideColumn(pages, NAV_V10) : [];
   if (version < 8) markStripWords(pages);
   if (version < 11) addNewWords(pages, deleted);
+  if (version < 12) removed.push(...splitSchool(pages, deleted, version));
+  return removed;
+}
+
+// v12: School had grown to 40-odd buttons, so most move to three smaller
+// pages it opens (In class, Lessons, My day). Each button keeps its picture
+// and words, under the starting board's id for its new page (so every device
+// that upgrades agrees); the old ids are returned to be marked deleted, so
+// a copy from a device not yet upgraded can't bring them back to School.
+// Buttons the grown-ups added stay on School; deleted words stay deleted.
+// Boards from before v11 also get v11's new school words here.
+const SCHOOL_PAGES = ['schoolclass', 'lessons', 'schoolday'];
+function splitSchool(pages, deleted, version) {
+  const school = pages.school;
+  if (!school) return [];
+  const at = Date.now();
+  const defaults = buildDefaultPages();
+  const removed = [];
+  for (const id of SCHOOL_PAGES) {
+    if (deleted['page:' + id]) continue;
+    const want = new Map(defaults[id].items.map((it) => [it.label.toLowerCase(), it]));
+    const moving = school.items.filter((it) => it.type !== 'folder' && want.has(it.label.toLowerCase()));
+    const has = new Set([...moving, ...(pages[id]?.items || [])].map((it) => it.label.toLowerCase()));
+    const fresh = version < 11 ? [...want.values()].filter((it) => !has.has(it.label.toLowerCase())
+      && !deleted[it.id] && !deleted['d-school-' + it.id.slice(id.length + 3)]) : [];
+    const created = !pages[id];
+    if (created) {
+      if (!moving.length && !fresh.length) continue;
+      pages[id] = { ...defaults[id], items: [], updatedAt: at, orderAt: at };
+    }
+    const page = pages[id];
+    const there = new Set(page.items.map((it) => it.label.toLowerCase()));
+    // In the new page's starting order.
+    const order = [...want.keys()];
+    moving.sort((a, b) => order.indexOf(a.label.toLowerCase()) - order.indexOf(b.label.toLowerCase()));
+    for (const it of moving) {
+      const key = it.label.toLowerCase();
+      if (!there.has(key)) { page.items.push({ ...it, id: want.get(key).id, updatedAt: at }); there.add(key); }
+      removed.push(it.id);
+    }
+    page.items.push(...fresh.map((it) => ({ ...it, updatedAt: at })));
+    if (created) page.items.sort((a, b) => order.indexOf(a.label.toLowerCase()) - order.indexOf(b.label.toLowerCase()));
+    page.orderAt = at;
+  }
+  const gone = new Set(removed);
+  school.items = school.items.filter((it) => !gone.has(it.id));
+  // The three page buttons go at the front of School.
+  const links = defaults.school.items.filter((it) => it.type === 'folder' && pages[it.link]
+    && !school.items.some((mine) => mine.link === it.link) && !deleted[it.id]);
+  school.items.unshift(...links.map((it) => ({ ...it, updatedAt: at })));
+  school.orderAt = at;
   return removed;
 }
 
@@ -141,6 +192,7 @@ function addNewWords(pages, deleted) {
   const defaults = buildDefaultPages();
   const everywhere = new Set(Object.values(pages).flatMap((p) => p.items.map((it) => it.id)));
   for (const [id, page] of Object.entries(defaults)) {
+    if (SCHOOL_PAGES.includes(id)) continue; // splitSchool (v12) makes these from School's own buttons
     if (!pages[id]) {
       if (deleted['page:' + id]) continue;
       pages[id] = { ...page, updatedAt: at, items: page.items.map((it) => ({ ...it, updatedAt: at })) };
@@ -148,7 +200,7 @@ function addNewWords(pages, deleted) {
     }
     const mine = pages[id];
     const labels = new Set(mine.items.map((it) => it.label.toLowerCase()));
-    const add = page.items.filter((it) => !everywhere.has(it.id) && !deleted[it.id] && !labels.has(it.label.toLowerCase()));
+    const add = page.items.filter((it) => !SCHOOL_PAGES.includes(it.link) && !everywhere.has(it.id) && !deleted[it.id] && !labels.has(it.label.toLowerCase()));
     if (!add.length) continue;
     mine.items.push(...add.map((it) => ({ ...it, updatedAt: at })));
     mine.orderAt = at;
