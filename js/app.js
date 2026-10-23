@@ -3,7 +3,7 @@
 import * as gphotos from './gphotos.js';
 import * as sync from './sync.js';
 import { initCropper } from './cropper.js';
-import { state, homeId, ui, init as stateInit } from './state.js';
+import { state, homeId, ui, whenSaved, init as stateInit } from './state.js';
 import { render, renderStrip, init as renderInit } from './render.js';
 import { showWelcome, init as settingsInit } from './settings.js';
 import { recordWords, init as voiceInit } from './voice.js';
@@ -51,12 +51,11 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   // mid-sentence or editing, so the board never changes under Robyn's finger.
   if (navigator.serviceWorker.controller) {
     navigator.serviceWorker.addEventListener('controllerchange', function reloadWhenSafe() {
-      if (safeToSwap()) location.reload();
+      if (safeToSwap()) whenSaved().then(() => location.reload());
       else setTimeout(reloadWhenSafe, SWAP_RETRY_MS);
     });
   }
 }
-navigator.storage?.persist?.();
 
 initCropper();
 try { if (sync.config().mode === 'send' && sessionStorage.getItem(EDIT_KEY)) ui.editing = true; } catch { /* ignore */ }
